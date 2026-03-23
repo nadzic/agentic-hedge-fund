@@ -1,0 +1,53 @@
+[project]
+name = "agentic-hedge-fund"
+version = "0.1.0"
+description = "Agentic hedge fund research and decisioning stack"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    # Environment / config
+    "python-dotenv",
+    "pydantic",
+    "pydantic-settings",
+    # LLM frameworks
+    "langchain",
+    "langgraph",
+    "langsmith",
+    "langchain-openai",
+    "langchain-anthropic",
+    # LlamaIndex ecosystem
+    "llama-index",
+    "llama-index-llms-openai",
+    "llama-index-embeddings-openai",
+    # RAG + retrieval
+    "faiss-cpu",
+    "chromadb",
+    "qdrant-client",
+    "tiktoken",
+    # Data stack
+    "pandas",
+    "numpy",
+    "yfinance",
+    "httpx",
+    "tenacity",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "ruff",
+    "basedpyright",
+    "ipykernel",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
