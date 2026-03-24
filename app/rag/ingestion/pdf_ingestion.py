@@ -3,6 +3,7 @@ from pathlib import Path
 
 from llama_index.core import SimpleDirectoryReader
 from llama_index.core.schema import Document
+from llama_index.readers.file import PDFReader
 
 def _add_pdf_metadata(docs: list[Document], fallback_source: Path) -> list[Document]:
     for doc in docs:
@@ -21,6 +22,17 @@ def _add_pdf_metadata(docs: list[Document], fallback_source: Path) -> list[Docum
         doc.metadata = metadata
     return docs
 
+
+def _load_pdf_documents(input_files: list[str]) -> list[Document]:
+    """Force PDF parsing through PDFReader for reliable text extraction."""
+    reader = SimpleDirectoryReader(
+        input_files=input_files,
+        file_extractor={".pdf": PDFReader()},
+    )
+    docs = reader.load_data()
+    # Guard against raw binary-like PDF content slipping through.
+    return [doc for doc in docs if not (doc.text or "").lstrip().startswith("%PDF-")]
+
 def ingest_pdf(path: str, recursive: bool = False) -> list[Document]:
     # load pdf(s)
     source = Path(path).resolve()
@@ -29,13 +41,13 @@ def ingest_pdf(path: str, recursive: bool = False) -> list[Document]:
     if source.is_file():
         if source.suffix.lower() != ".pdf":
             raise ValueError(f"Expected a .pdf file, got: {source.name}")
-        reader = SimpleDirectoryReader(input_files=[str(source)])
-        return _add_pdf_metadata(reader.load_data(), source)
+        docs = _load_pdf_documents([str(source)])
+        return _add_pdf_metadata(docs, source)
     pdf_files = sorted(source.rglob("*.pdf") if recursive else source.glob("*.pdf"))
     if not pdf_files:
         raise ValueError(f"No PDF files found in directory: {source}")
-    reader = SimpleDirectoryReader(input_files=[str(file) for file in pdf_files])
-    return _add_pdf_metadata(reader.load_data(), source)
+    docs = _load_pdf_documents([str(file) for file in pdf_files])
+    return _add_pdf_metadata(docs, source)
 
 def parse_args() -> argparse.Namespace:
     # parse cli args

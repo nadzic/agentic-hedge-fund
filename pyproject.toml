@@ -30,6 +30,11 @@ dependencies = [
     "yfinance",
     "httpx",
     "tenacity",
+    "playwright>=1.58.0",
+    "duckduckgo-search>=8.1.1",
+    "llama-index-readers-web>=0.6.0",
+    "llama-index-readers-file>=0.6.0",
+    "pypdf>=6.9.2",
 ]
 
 [project.optional-dependencies]

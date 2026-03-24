@@ -87,6 +87,10 @@ def main() -> None:
     print(f"Dropped empty or short: {stats['dropped_empty_or_short']}")
     print(f"Dropped challenge or junk: {stats['dropped_challenge_or_junk']}")
     print(f"Total characters: {sum(len(doc.text) for doc in transformed_docs)}")
+    for idx, doc in enumerate(transformed_docs, start=1):
+        print(f"\nDocument {idx}:")
+        print(f"Metadata: {doc.metadata}")
+        print(f"Text preview: {doc.text[:500]}{'...' if len(doc.text) > 500 else ''}\n")
     print(f"Total documents: {len(transformed_docs)}")
     print(f"Total characters: {sum(len(doc.text) for doc in transformed_docs)}")
 if __name__ == "__main__":
