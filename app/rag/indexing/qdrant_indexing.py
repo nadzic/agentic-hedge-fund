@@ -91,7 +91,12 @@ def main() -> None:
     indexer = QdrantIndexing(collection_name=QDRANT_COLLECTION)
     indexer.save_jsonl_snapshot(transformed_docs, str(processed_jsonl_path))
     index = indexer.build_qdrant_index(transformed_docs)
-    qe = index.as_query_engine(similarity_top_k=5)
+    qe = index.as_query_engine(
+        vector_store_query_mode="hybrid",
+        similarity_top_k=5,
+        sparse_top_k=20,
+        alpha=0.5,
+    )
     print(qe.query("What were NVIDIA gross margins in Q3 FY25?"))
 
 

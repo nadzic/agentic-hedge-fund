@@ -49,7 +49,14 @@ class CustomTransformation:
         metadata["processed_at"] = datetime.now().isoformat()
         metadata["doc_hash"] = self._build_doc_hash(text, source_id)
         metadata["collection_name"] = self.collection_name
-        return Document(text=text, metadata=doc.metadata)
+        source_id = metadata.get("source_id", "")
+        if "nvidia" in source_id.lower():
+            metadata["symbol"] = "NVDA"
+            metadata["company"] = "NVIDIA"
+        if "google" in source_id.lower():
+            metadata["symbol"] = "GOOGL"
+            metadata["company"] = "Alphabet"
+        return Document(text=text, metadata=metadata)
 
     def transform_documents(self, docs: list[Document]) -> tuple[list[Document], dict]:
         # transform all; stats on drops
