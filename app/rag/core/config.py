@@ -58,3 +58,6 @@ PDF_SOURCE_PATHS = ["app/rag/data/raw/google", "app/rag/data/raw/nvidia"]
 PLAYWRIGHT_STATE_FILE = "app/rag/data/raw/google/google_storage_state.json"
 MIN_DOC_CHARS = 300
 QDRANT_COLLECTION = "company_docs"
+
+CHUNK_SIZE = 800
+CHUNK_OVERLAP = 160

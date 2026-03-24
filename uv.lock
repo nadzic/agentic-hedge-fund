@@ -35,6 +35,7 @@ dependencies = [
     { name = "llama-index-llms-openai" },
     { name = "llama-index-readers-file" },
     { name = "llama-index-readers-web" },
+    { name = "llama-index-vector-stores-qdrant" },
     { name = "numpy" },
     { name = "pandas" },
     { name = "playwright" },
@@ -75,6 +76,7 @@ requires-dist = [
     { name = "llama-index-llms-openai" },
     { name = "llama-index-readers-file", specifier = ">=0.6.0" },
     { name = "llama-index-readers-web", specifier = ">=0.6.0" },
+    { name = "llama-index-vector-stores-qdrant", specifier = ">=0.10.0" },
     { name = "numpy" },
     { name = "pandas" },
     { name = "playwright", specifier = ">=1.58.0" },
@@ -2193,6 +2195,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/7b/f6/b98aea1f519c47c28d3a4aac38264e726b47482eac72966f5438292fbc64/llama_index_readers_web-0.6.0.tar.gz", hash = "sha256:82f8ab681fd106fc3218c9bbe79f7486ba6d5858f9b863c31817fa4fe949ca7f", size = 86343, upload-time = "2026-03-12T20:39:07.665Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/7d/0e/fc61c995e225417f8f1fae1a00722253cead1a439b01a57f1fc7fd27db0e/llama_index_readers_web-0.6.0-py3-none-any.whl", hash = "sha256:766afdce95dfe28900b8cebfee80bf1e3b2ae234b8227080bc72001f5d2e6689", size = 118724, upload-time = "2026-03-12T20:39:08.659Z" },
+]
+
+[[package]]
+name = "llama-index-vector-stores-qdrant"
+version = "0.10.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "grpcio" },
+    { name = "llama-index-core" },
+    { name = "qdrant-client" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/cf/ff/f1ce3444c65cf3aff1edd4810e2736f9d81512cd5e2565cd7d341e17fbba/llama_index_vector_stores_qdrant-0.10.0.tar.gz", hash = "sha256:173855ff82fffedda5b24c2561f8a6dcd9da24318143188de85470f6667a84ea", size = 14699, upload-time = "2026-03-12T20:47:56.99Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d4/8d/6486b04a867e6ce5fdd3b838146a9e951a42668ea8fd7fcee9d0e6c41c9f/llama_index_vector_stores_qdrant-0.10.0-py3-none-any.whl", hash = "sha256:a883c9bd3d301b434fdf1645a5118b18db0b429d4011ba275ce23a69297606c6", size = 14967, upload-time = "2026-03-12T20:47:57.921Z" },
 ]
 
 [[package]]
