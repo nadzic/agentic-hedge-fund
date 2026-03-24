@@ -3,7 +3,6 @@ from app.agents.graph.state import HedgeFundState, WorkerState
 from langgraph.types import Send
 
 
-
 def orchestrator_node(state: HedgeFundState) -> dict:
   # add our tasks
   tasks = [
@@ -16,7 +15,10 @@ def orchestrator_node(state: HedgeFundState) -> dict:
 
 
 def assign_workers(state: HedgeFundState):
-  return [Send("analyst_worker_node", { "analyst_task": analyst_task }) for analyst_task in state["analyst_tasks"]]
+    return [
+        Send("analyst_worker_node", {"analyst_task": analyst_task})
+        for analyst_task in state["analyst_tasks"]
+    ]
 
 def analyst_worker_node(state: WorkerState) -> dict:
   analyst_name = state["analyst_task"].analyst
