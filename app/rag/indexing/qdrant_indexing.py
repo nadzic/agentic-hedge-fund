@@ -12,12 +12,22 @@ from llama_index.vector_stores.qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
 
 try:
-    from app.rag.core.config import CHUNK_OVERLAP, CHUNK_SIZE, QDRANT_COLLECTION
+    from app.rag.core.config import (
+        CHUNK_OVERLAP,
+        CHUNK_SIZE,
+        PROCESSED_JSONL_PATH,
+        QDRANT_COLLECTION,
+    )
     from app.rag.ingestion.custom_transformation import CustomTransformation
 except ModuleNotFoundError:
     repo_root = Path(__file__).resolve().parents[3]
     sys.path.append(str(repo_root))
-    from app.rag.core.config import CHUNK_OVERLAP, CHUNK_SIZE, QDRANT_COLLECTION
+    from app.rag.core.config import (
+        CHUNK_OVERLAP,
+        CHUNK_SIZE,
+        PROCESSED_JSONL_PATH,
+        QDRANT_COLLECTION,
+    )
     from app.rag.ingestion.custom_transformation import CustomTransformation
 
 
@@ -70,12 +80,13 @@ def main() -> None:
     transformer = CustomTransformation(collection_name="company_docs")
     repo_root = Path(__file__).resolve().parents[3]
     raw_data_dir = repo_root / "app/rag/data/raw"
+    processed_jsonl_path = repo_root / PROCESSED_JSONL_PATH
 
     docs = SimpleDirectoryReader(input_dir=str(raw_data_dir), recursive=True).load_data()
     transformed_docs, _stats = transformer.transform_documents(docs)
 
     indexer = QdrantIndexing(collection_name=QDRANT_COLLECTION)
-    indexer.save_jsonl_snapshot(transformed_docs, "app/rag/data/processed/processed_docs.jsonl")
+    indexer.save_jsonl_snapshot(transformed_docs, str(processed_jsonl_path))
     index = indexer.build_qdrant_index(transformed_docs)
     qe = index.as_query_engine(similarity_top_k=5)
     print(qe.query("What were NVIDIA gross margins in Q3 FY25?"))
