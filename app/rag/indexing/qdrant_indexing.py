@@ -65,6 +65,9 @@ class QdrantIndexing:
         vector_store = QdrantVectorStore(
             client=self.client,
             collection_name=self.collection_name,
+            enable_hybrid=True,
+            fastembed_sparse_model="Qdrant/bm25",
+            batch_size=20
         )
         storage_context = StorageContext.from_defaults(vector_store=vector_store)
 
