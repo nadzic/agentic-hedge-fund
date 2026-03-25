@@ -8,9 +8,8 @@ import httpx
 from bs4 import BeautifulSoup
 from llama_index.core.schema import Document
 from llama_index.readers.web import SimpleWebPageReader  # pyright: ignore[reportMissingTypeStubs]
-from playwright.sync_api import Page
+from playwright.sync_api import Page, sync_playwright
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
-from playwright.sync_api import sync_playwright
 
 try:
     from app.rag.core.config import SOURCE_URLS
@@ -173,7 +172,9 @@ def ingest_url(
             context.close()
             browser.close()
             raise RuntimeError(
-                "Challenge page detected. Retry with --no-headless --manual-wait 180 and solve verification in the opened browser."
+                "Challenge page detected. "
+                "Retry with --no-headless --manual-wait 180 and "
+                "solve verification in the opened browser."
             )
 
         if state_file:

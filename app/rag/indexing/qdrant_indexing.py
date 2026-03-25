@@ -8,7 +8,9 @@ from llama_index.core.node_parser import SentenceSplitter
 from llama_index.core.schema import Document
 from llama_index.core.storage import StorageContext
 from llama_index.embeddings.openai import OpenAIEmbedding  # pyright: ignore[reportMissingTypeStubs]
-from llama_index.vector_stores.qdrant import QdrantVectorStore  # pyright: ignore[reportMissingTypeStubs]
+from llama_index.vector_stores.qdrant import (
+    QdrantVectorStore,  # pyright: ignore[reportMissingTypeStubs]
+)
 from qdrant_client import QdrantClient
 
 try:

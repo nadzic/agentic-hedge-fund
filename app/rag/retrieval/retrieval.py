@@ -5,7 +5,9 @@ from abc import ABC, abstractmethod
 from llama_index.core import VectorStoreIndex
 from llama_index.core.vector_stores import FilterOperator, MetadataFilter, MetadataFilters
 from llama_index.embeddings.openai import OpenAIEmbedding  # pyright: ignore[reportMissingTypeStubs]
-from llama_index.vector_stores.qdrant import QdrantVectorStore  # pyright: ignore[reportMissingTypeStubs]
+from llama_index.vector_stores.qdrant import (
+  QdrantVectorStore,  # pyright: ignore[reportMissingTypeStubs]
+)
 from pydantic import BaseModel, Field
 from qdrant_client import QdrantClient
 from typing_extensions import override
