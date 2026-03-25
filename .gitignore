@@ -39,3 +39,7 @@ htmlcov/
 
 # OS-specific files
 .DS_Store
+
+# Local vector DB and processed RAG artifacts
+qdrant_data/
+app/rag/data/processed/
