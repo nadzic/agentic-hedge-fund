@@ -1,9 +1,12 @@
 from __future__ import annotations
 
-from typing import Any
-
 from app.rag.core.config import QDRANT_COLLECTION
-from app.rag.retrieval.retrieval import QdrantRetrievalService, RetrievalRequest, RetrievedChunk
+from app.rag.retrieval.retrieval import (
+  FilterValue,
+  QdrantRetrievalService,
+  RetrievalRequest,
+  RetrievedChunk,
+)
 
 _retrieval_service: QdrantRetrievalService | None = None
 
@@ -19,11 +22,11 @@ def run_research_vectordatabase(
     top_k: int = 8,
     sparse_top_k: int = 20,
     alpha: float = 0.5,
-    extra_filters: dict[str, Any] | None = None
+    extra_filters: dict[str, FilterValue] | None = None
 ) -> list[RetrievedChunk]:
   filters = dict(extra_filters or {})
   if symbol:
-    filters.setdefault("symbol", symbol.upper())
+    _ = filters.setdefault("symbol", symbol.upper())
 
   request = RetrievalRequest(
     query=query,

@@ -15,8 +15,8 @@ except ModuleNotFoundError:
 
 class CustomTransformation:
     def __init__(self, collection_name: str, min_chars: int = 300):
-        self.collection_name = collection_name
-        self.min_chars = min_chars
+        self.collection_name: str = collection_name
+        self.min_chars: int = min_chars
 
     def _normalize_text(self, text: str) -> str:
         # remove whitespace lines
@@ -42,12 +42,12 @@ class CustomTransformation:
             return None
         if len(text) < self.min_chars:
             return None
-        metadata = dict(doc.metadata or {})
-        source_id = metadata.get("source_id", "unknown_source_id")
+        metadata: dict[str, object] = dict(doc.metadata or {})
+        source_id = str(metadata.get("source_id", "unknown_source_id"))
         metadata["processed_at"] = datetime.now().isoformat()
         metadata["doc_hash"] = self._build_doc_hash(text, source_id)
         metadata["collection_name"] = self.collection_name
-        source_id = metadata.get("source_id", "")
+        source_id = str(metadata.get("source_id", ""))
         if "nvidia" in source_id.lower():
             metadata["symbol"] = "NVDA"
             metadata["company"] = "NVIDIA"

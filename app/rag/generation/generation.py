@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
+from typing_extensions import override
 
 from app.agents.services.llm import get_llm
 from app.rag.core.config import QDRANT_COLLECTION
@@ -26,7 +27,7 @@ class GenerationResponse(BaseModel):
 
 class GenerationService(ABC):
   def __init__(self, llm: BaseChatModel):
-    self.llm = llm
+    self.llm: BaseChatModel = llm
 
   @abstractmethod
   def generate(self, request: GenerationRequest) -> GenerationResponse:
@@ -53,7 +54,7 @@ class LLMGenerationService(GenerationService):
         citations.append(src)
     return citations
 
-
+  @override
   def generate(self, request: GenerationRequest) -> GenerationResponse:
     if not request.retrieved_chunks:
       return GenerationResponse(
@@ -91,7 +92,7 @@ class LLMGenerationService(GenerationService):
     ]
 
     response = self.llm.invoke(messages)
-    answer_text = str(response.content)
+    answer_text = response.text()
 
     return GenerationResponse(
       answer=answer_text,

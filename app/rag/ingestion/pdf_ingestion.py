@@ -1,24 +1,33 @@
 import argparse
 from collections.abc import Iterator
+from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
 
 from llama_index.core import SimpleDirectoryReader
 from llama_index.core.schema import Document
-from llama_index.readers.file import PDFReader
+from llama_index.readers.file import PDFReader  # pyright: ignore[reportMissingTypeStubs]
+
+
+@dataclass(frozen=True)
+class CliArgs:
+    path: str
+    recursive: bool
+    text_out_dir: str
 
 
 def _add_pdf_metadata(doc: Document, fallback_source: Path) -> Document:
-    metadata = doc.metadata or {}
-    file_path = metadata.get("file_path")
-    file_name = metadata.get("file_name")
-    if file_path:
-        source_id = str(Path(file_path).resolve())
-    elif file_name:
-        source_id = str((fallback_source / file_name).resolve())
+    metadata: dict[str, object] = dict(doc.metadata or {})
+    file_path_obj = metadata.get("file_path")
+    file_name_obj = metadata.get("file_name")
+    if isinstance(file_path_obj, str) and file_path_obj:
+        source_id = str(Path(file_path_obj).resolve())
+    elif isinstance(file_name_obj, str) and file_name_obj:
+        source_id = str((fallback_source / file_name_obj).resolve())
     else:
         source_id = str(fallback_source.resolve())
-    metadata.setdefault("source_type", "pdf")
-    metadata.setdefault("source_id", source_id)
+    _ = metadata.setdefault("source_type", "pdf")
+    _ = metadata.setdefault("source_id", source_id)
     doc.metadata = metadata
     return doc
 
@@ -62,22 +71,27 @@ def ingest_pdf(path: str, recursive: bool = False) -> list[Document]:
     """Compatibility wrapper returning all ingested PDF documents."""
     return list(ingest_pdf_iter(path=path, recursive=recursive))
 
-def parse_args() -> argparse.Namespace:
+def parse_args() -> CliArgs:
     # parse cli args
     parser = argparse.ArgumentParser(description="Ingest PDF files with LlamaIndex.")
-    parser.add_argument("--path", required=True, help="PDF file or directory path.")
-    parser.add_argument(
+    _ = parser.add_argument("--path", required=True, help="PDF file or directory path.")
+    _ = parser.add_argument(
         "--recursive",
         action=argparse.BooleanOptionalAction,
         default=False,
         help="Search directories recursively for .pdf files.",
     )
-    parser.add_argument(
+    _ = parser.add_argument(
         "--text-out-dir",
         default="",
         help="Optional directory to save one .txt file per loaded document.",
     )
-    return parser.parse_args()
+    namespace = parser.parse_args()
+    return CliArgs(
+        path=cast(str, namespace.path),
+        recursive=cast(bool, namespace.recursive),
+        text_out_dir=cast(str, namespace.text_out_dir),
+    )
 
 def main() -> None:
     args = parse_args()
@@ -90,15 +104,18 @@ def main() -> None:
             ingest_pdf_iter(path=args.path, recursive=args.recursive), start=1
         ):
             loaded_documents += 1
-            total_characters += len(doc.text)
-            source = doc.metadata.get("file_name", f"document_{idx}.pdf")
+            text = doc.text or ""
+            total_characters += len(text)
+            metadata: dict[str, object] = dict(doc.metadata or {})
+            source_obj = metadata.get("file_name", f"document_{idx}.pdf")
+            source = source_obj if isinstance(source_obj, str) else f"document_{idx}.pdf"
             output_file = out_dir / f"{Path(source).stem}_{idx}.txt"
-            output_file.write_text(doc.text, encoding="utf-8")
+            _ = output_file.write_text(text, encoding="utf-8")
         print(f"Saved text files to: {out_dir}")
     else:
         for doc in ingest_pdf_iter(path=args.path, recursive=args.recursive):
             loaded_documents += 1
-            total_characters += len(doc.text)
+            total_characters += len(doc.text or "")
 
     print(f"Loaded documents: {loaded_documents}")
     print(f"Total characters: {total_characters}")

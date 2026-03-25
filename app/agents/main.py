@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from typing import Protocol, cast
 
 # Allow running both:
 # - python -m app.agents.main
@@ -14,8 +15,12 @@ from app.agents.graph.state import HedgeFundState
 from app.agents.graph.workflow import build_graph
 
 
+class _GraphRunner(Protocol):
+    def invoke(self, input: HedgeFundState, /) -> HedgeFundState: ...
+
+
 def main() -> None:
-    graph = build_graph()
+    graph = cast(_GraphRunner, cast(object, build_graph()))
     state: HedgeFundState = {
         "input": SignalInput(
             query="Should I buy AAPL for a swing trade?",
@@ -30,7 +35,7 @@ def main() -> None:
         "error": None,
     }
 
-    result = graph.invoke(state)
+    result: HedgeFundState = graph.invoke(state)
 
     suggestion = result.get("suggestion")
     print("=== AI Hedge Fund MVP ===")

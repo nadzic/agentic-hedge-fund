@@ -1,14 +1,14 @@
 import json
 import sys
 from collections.abc import Iterable
-from importlib import import_module
 from pathlib import Path
-from typing import Any
 
 from llama_index.core import SimpleDirectoryReader, VectorStoreIndex
 from llama_index.core.node_parser import SentenceSplitter
 from llama_index.core.schema import Document
 from llama_index.core.storage import StorageContext
+from llama_index.embeddings.openai import OpenAIEmbedding  # pyright: ignore[reportMissingTypeStubs]
+from llama_index.vector_stores.qdrant import QdrantVectorStore  # pyright: ignore[reportMissingTypeStubs]
 from qdrant_client import QdrantClient
 
 try:
@@ -41,10 +41,7 @@ class QdrantIndexing:
     ) -> None:
         self.collection_name: str = collection_name
         self.client: QdrantClient = QdrantClient(url=qdrant_url, api_key=api_key)
-        openai_embedding_cls = getattr(
-            import_module("llama_index.embeddings.openai"), "OpenAIEmbedding"
-        )
-        self.embedding_model: Any = openai_embedding_cls(model=embedding_model)
+        self.embedding_model: OpenAIEmbedding = OpenAIEmbedding(model=embedding_model)
 
     @staticmethod
     def save_jsonl_snapshot(docs: Iterable[Document], out_path: str) -> None:
@@ -65,10 +62,7 @@ class QdrantIndexing:
         nodes = splitter.get_nodes_from_documents(docs)
 
         # 2) Qdrant vector store
-        qdrant_vector_store_cls = getattr(
-            import_module("llama_index.vector_stores.qdrant"), "QdrantVectorStore"
-        )
-        vector_store = qdrant_vector_store_cls(
+        vector_store = QdrantVectorStore(
             client=self.client,
             collection_name=self.collection_name,
             enable_hybrid=True,
@@ -96,15 +90,8 @@ def main() -> None:
 
     indexer = QdrantIndexing(collection_name=QDRANT_COLLECTION)
     indexer.save_jsonl_snapshot(transformed_docs, str(processed_jsonl_path))
-    index = indexer.build_qdrant_index(transformed_docs)
-    index_any: Any = index
-    qe = index_any.as_query_engine(
-        vector_store_query_mode="hybrid",
-        similarity_top_k=5,
-        sparse_top_k=20,
-        alpha=0.5,
-    )
-    print(qe.query("What were NVIDIA gross margins in Q3 FY25?"))
+    _ = indexer.build_qdrant_index(transformed_docs)
+    print(f"Indexed {len(transformed_docs)} transformed documents into Qdrant.")
 
 
 if __name__ == "__main__":

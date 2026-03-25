@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
 from langchain_core.language_models.chat_models import BaseChatModel
 
-load_dotenv()
+_ = load_dotenv()
 
 def get_llm() -> BaseChatModel:
     model_name = os.getenv("LLM_MODEL_NAME", "gpt-4o-mini")
