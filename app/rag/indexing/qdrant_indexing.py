@@ -1,9 +1,11 @@
 # pyright: reportMissingTypeStubs=false
 import json
+import os
 import sys
 from collections.abc import Iterable
 from pathlib import Path
 
+from dotenv import load_dotenv
 from llama_index.core import SimpleDirectoryReader, VectorStoreIndex
 from llama_index.core.node_parser import SentenceSplitter
 from llama_index.core.schema import Document
@@ -11,6 +13,8 @@ from llama_index.core.storage import StorageContext
 from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.vector_stores.qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
+
+load_dotenv()
 
 try:
     from app.rag.core.config import (
@@ -41,7 +45,9 @@ class QdrantIndexing:
         embedding_model: str = "text-embedding-3-small",
     ) -> None:
         self.collection_name: str = collection_name
-        self.client: QdrantClient = QdrantClient(url=qdrant_url, api_key=api_key)
+        self.client: QdrantClient = QdrantClient(url=qdrant_url, api_key=api_key, timeout=30)
+        if not os.getenv("OPENAI_API_KEY"):
+            raise EnvironmentError("OPENAI_API_KEY is not set in environment/.env")
         self.embedding_model: OpenAIEmbedding = OpenAIEmbedding(model=embedding_model)
 
     @staticmethod

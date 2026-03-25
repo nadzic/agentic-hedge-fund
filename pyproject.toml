@@ -38,6 +38,7 @@ dependencies = [
     "llama-index-vector-stores-qdrant>=0.10.0",
     "fastapi>=0.135.2",
     "uvicorn[standard]>=0.42.0",
+    "fastembed>=0.8.0",
 ]
 
 [project.optional-dependencies]
