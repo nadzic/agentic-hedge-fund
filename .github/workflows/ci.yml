@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push: 
+    branches: [main]
+  workflow_dispatch:
+
+  concurrency:
+    groups: ci-${{ github.ref }}
+    cancel-in-progress: true
+
+  jobs:
+    quality-check:
+      name: Lint, Type Check, and Tests
+      runs-on: ubuntu-latest
+
+      steps:
+        - name: Checkout
+          uses: actions/checkout@v4
+
+        - name: Setup uv + Python
+          uses: astral-sh/setup-uv@v5
+          with:
+            python-version: 3.11
+            enable-cache: true
+
+        - name: Sync dependencies
+          run: uv sync --extra dev
+        
+        - name: Ruff lint
+          run: uv ruff check .
+
+        - name: BasedPyright type check
+          run: uv basedpyright check .
+
+        - name: Pytest run tests
+          run: |
+            if [ -d tests ]; then
+              uv run pytest -q
+            else
+              echo "No tests directory found. Skipping pytest."
+            fi
+          
+        - name: Compile smoke check
+          run: uv run python -m compileall app
+      
+    docker:
+      name: Docker build
+      runs-on: ubuntu-latest
+      needs: quality-check
+
+      steps: 
+        - name: Checkout
+          uses: actions/checkout@v4
+
+        - name: Build docker image
+          run: docker build -t agentic-hedge-fund:ci .
+
+
+
+          
+  

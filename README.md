@@ -85,7 +85,7 @@ Create `.env` (or copy from `sample.env`) and set at least:
 - `OPENAI_API_KEY`
 - `LLM_PROVIDER`
 - `LLM_MODEL_NAME`
-- `QDRANT_URL` (local default is usually `http://localhost:6333`)
+- `QDRANT_URL` (for local non-Docker run, usually `http://localhost:6333`)
 
 ### 3) Run API
 ```bash
@@ -93,18 +93,38 @@ uv run uvicorn app.main:app --reload --app-dir .
 ```
 
 Open:
-- Swagger UI: `http://localhost:8000/docs`
+- API docs: `http://localhost:8000/docs`
+- Health: `http://localhost:8000/health`
 
 ## Quickstart (Docker Compose)
 
-Runs both API and Qdrant for local development:
+Runs both API and Qdrant for local development with hot-reload enabled in the API container.
 
+### Start
 ```bash
 docker compose up --build
 ```
 
-Default endpoints:
-- API: `http://localhost:8000`
+### Useful commands
+```bash
+# Start in background
+docker compose up --build -d
+
+# Follow logs
+docker compose logs -f api
+docker compose logs -f qdrant
+
+# Stop and remove containers
+docker compose down
+
+# Stop + remove volumes (resets local Qdrant data)
+docker compose down -v
+```
+
+### Endpoints
+- API docs: `http://localhost:8000/docs`
+- Health: `http://localhost:8000/health`
+- Analyze: `POST http://localhost:8000/signals/analyze`
 - Qdrant: `http://localhost:6333`
 
 ## API Endpoints
@@ -125,6 +145,17 @@ Example request:
 }
 ```
 
+Example curl:
+```bash
+curl -X POST "http://localhost:8000/signals/analyze" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "Should I buy NVDA for a swing trade?",
+    "symbol": "NVDA",
+    "horizon": "swing"
+  }'
+```
+
 Example response (shape):
 
 ```json
@@ -142,6 +173,15 @@ Example response (shape):
 
 - **Local development:** Docker Compose with local Qdrant.
 - **Production / Cloud Run:** Deploy API container separately; point `QDRANT_URL` to managed/external Qdrant service.
+
+## CI
+
+GitHub Actions runs quality checks on push to `main`:
+- Ruff lint
+- BasedPyright type checking
+- Pytest (if `tests/` exists)
+- Python compile smoke check
+- Docker build job
 
 ## Current Status
 
