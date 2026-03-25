@@ -172,9 +172,8 @@ def ingest_url(
             context.close()
             browser.close()
             raise RuntimeError(
-                "Challenge page detected. "
-                "Retry with --no-headless --manual-wait 180 and "
-                "solve verification in the opened browser."
+                "Challenge page detected. Retry with --no-headless --manual-wait 180 and "
+                + "solve verification in the opened browser."
             )
 
         if state_file:
