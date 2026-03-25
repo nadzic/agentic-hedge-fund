@@ -1,21 +1,23 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any
 
 from llama_index.core import VectorStoreIndex
 from llama_index.core.vector_stores import FilterOperator, MetadataFilter, MetadataFilters
-from llama_index.embeddings.openai import OpenAIEmbedding
-from llama_index.vector_stores.qdrant import QdrantVectorStore
+from llama_index.embeddings.openai import OpenAIEmbedding  # pyright: ignore[reportMissingTypeStubs]
+from llama_index.vector_stores.qdrant import QdrantVectorStore  # pyright: ignore[reportMissingTypeStubs]
 from pydantic import BaseModel, Field
 from qdrant_client import QdrantClient
+from typing_extensions import override
+
+FilterValue = str | int | float | bool | None
 
 
 class RetrievalRequest(BaseModel):
   query: str
   # Keep high top_k for downstream reranking
   top_k: int = Field(30, ge=1, le=50)
-  filters: dict[str, Any] | None = None
+  filters: dict[str, FilterValue] | None = None
   sparse_top_k: int = Field(30, ge=1, le=200)
   alpha: float = Field(0.5, ge=0.0, le=1.0)
 
@@ -25,7 +27,7 @@ class RetrievedChunk(BaseModel):
   source_id: str | None = None
   source_type: str | None = None
   doc_hash: str | None = None
-  metadata: dict[str, Any] = Field(default_factory=dict)
+  metadata: dict[str, FilterValue] = Field(default_factory=dict)
 
 class RetrievalService(ABC):
   @abstractmethod
@@ -42,12 +44,12 @@ class QdrantRetrievalService(RetrievalService):
     sparse_model: str = "Qdrant/bm25"
   ):
 
-    self.collection_name = collection_name
-    self.client = QdrantClient(url=qdrant_url, api_key=api_key)
-    self.embedding_model = OpenAIEmbedding(model=embedding_model)
+    self.collection_name: str = collection_name
+    self.client: QdrantClient = QdrantClient(url=qdrant_url, api_key=api_key)
+    self.embedding_model: OpenAIEmbedding = OpenAIEmbedding(model=embedding_model)
 
     # 1) Qdrant vector store
-    self.vector_store = QdrantVectorStore(
+    self.vector_store: QdrantVectorStore = QdrantVectorStore(
       client=self.client,
       collection_name=self.collection_name,
       enable_hybrid=True,
@@ -56,13 +58,13 @@ class QdrantRetrievalService(RetrievalService):
     )
 
     # 2) Vector store index
-    self.index = VectorStoreIndex.from_vector_store(
+    self.index: VectorStoreIndex = VectorStoreIndex.from_vector_store(
       vector_store=self.vector_store,
       embed_model=self.embedding_model,
     )
   
   @staticmethod
-  def _to_llama_filters(raw_filters: dict[str, Any] | None) -> MetadataFilters | None:
+  def _to_llama_filters(raw_filters: dict[str, FilterValue] | None) -> MetadataFilters | None:
     if not raw_filters:
         return None
     return MetadataFilters(
@@ -72,6 +74,7 @@ class QdrantRetrievalService(RetrievalService):
         ]
     )
 
+  @override
   def retrieve(self, request: RetrievalRequest) -> list[RetrievedChunk]:
     llama_filters = self._to_llama_filters(request.filters)
 
