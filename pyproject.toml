@@ -36,6 +36,8 @@ dependencies = [
     "llama-index-readers-file>=0.6.0",
     "pypdf>=6.9.2",
     "llama-index-vector-stores-qdrant>=0.10.0",
+    "fastapi>=0.135.2",
+    "uvicorn[standard]>=0.42.0",
 ]
 
 [project.optional-dependencies]
