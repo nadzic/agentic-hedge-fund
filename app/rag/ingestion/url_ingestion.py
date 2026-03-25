@@ -86,7 +86,16 @@ def ingest_url(
             text = _clean_text(docs[0].text)
             if text and not _looks_like_challenge(text):
                 _save_if_requested(text_out, text)
-                return Document(text=text, metadata={"source_url": url, "ingestion_method": "web_reader", "source_type": "url", "source_id": url, "source_name": url.split("/")[-1]})
+                return Document(
+                    text=text,
+                    metadata={
+                        "source_url": url,
+                        "ingestion_method": "web_reader",
+                        "source_type": "url",
+                        "source_id": url,
+                        "source_name": url.split("/")[-1],
+                    },
+                )
     except Exception:
         # Playwright fallback handles blocked/JS-heavy pages.
         pass
@@ -111,7 +120,16 @@ def ingest_url(
             if text and not _looks_like_challenge(text) and not _looks_like_challenge(html):
                 _save_if_requested(html_out, html)
                 _save_if_requested(text_out, text)
-                return Document(text=text, metadata={"source_url": url, "ingestion_method": "httpx", "source_type": "url", "source_id": url, "source_name": url.split("/")[-1]})
+                return Document(
+                    text=text,
+                    metadata={
+                        "source_url": url,
+                        "ingestion_method": "httpx",
+                        "source_type": "url",
+                        "source_id": url,
+                        "source_name": url.split("/")[-1],
+                    },
+                )
     except Exception:
         pass
 
@@ -165,11 +183,24 @@ def ingest_url(
 
     _save_if_requested(html_out, html)
     _save_if_requested(text_out, text)
-    return Document(text=text, metadata={"source_url": url, "ingestion_method": "playwright", "source_type": "url", "source_id": url, "source_name": url.split("/")[-1]})
+    return Document(
+        text=text,
+        metadata={
+            "source_url": url,
+            "ingestion_method": "playwright",
+            "source_type": "url",
+            "source_id": url,
+            "source_name": url.split("/")[-1],
+        },
+    )
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Ingest one URL with LlamaIndex + Playwright fallback.")
+    parser = argparse.ArgumentParser(
+        description=(
+            "Ingest one URL with LlamaIndex + Playwright fallback."
+        )
+    )
     parser.add_argument("--url", default="", help="URL to ingest.")
     parser.add_argument(
         "--url-key",

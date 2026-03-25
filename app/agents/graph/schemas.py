@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import StrEnum
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -8,7 +8,7 @@ AnalystName = Literal["fundamentals", "technicals", "valuation", "sentiment"]
 class AnalystTask(BaseModel):
   analyst: AnalystName
 
-class Signal(str, Enum): # type: Literal["buy", "sell", "hold", "no_trade"]
+class Signal(StrEnum):
   BUY = "buy"
   SELL = "sell"
   HOLD = "hold"
