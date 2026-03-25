@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from app.agents.graph.schemas import AnalystOutput, Signal
+from app.agents.graph.schemas import AnalystName, AnalystOutput, Signal
 
 
-def placeholder_output(analyst: str, reasoning: str) -> dict:
+def placeholder_output(analyst: AnalystName, reasoning: str) -> dict[str, list[AnalystOutput]]:
     """Return a consistent placeholder analyst response."""
     out = AnalystOutput(
-        analyst=analyst,  # type: ignore[arg-type]
+        analyst=analyst,
         signal=Signal.HOLD,
         confidence=0.5,
         reasoning=reasoning,

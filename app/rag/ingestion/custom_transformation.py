@@ -56,7 +56,7 @@ class CustomTransformation:
             metadata["company"] = "Alphabet"
         return Document(text=text, metadata=metadata)
 
-    def transform_documents(self, docs: list[Document]) -> tuple[list[Document], dict]:
+    def transform_documents(self, docs: list[Document]) -> tuple[list[Document], dict[str, int]]:
         # transform all; stats on drops
         out: list[Document] = []
         stats = {

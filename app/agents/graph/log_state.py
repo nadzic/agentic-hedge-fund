@@ -1,4 +1,6 @@
 import logging
+from collections.abc import Mapping
+from typing import Any
 
 from app.agents.graph.state import HedgeFundState, WorkerState
 
@@ -7,9 +9,8 @@ logger = logging.getLogger(__name__)
 
 def log_state(
   node: str,
-  state: HedgeFundState | WorkerState | dict,
+  state: HedgeFundState | WorkerState | Mapping[str, Any],
   keys: list[str] | None = None,
-  log_level: int = logging.INFO,
 ) -> None:
   if keys is None:
     keys = ["input", "analyst_tasks", "analyst_outputs", "suggestion", "warning", "error"]

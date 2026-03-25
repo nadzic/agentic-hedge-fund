@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 from langgraph.types import Send
 
 from app.agents.graph.log_state import log_state
@@ -7,7 +9,7 @@ from app.agents.graph.schemas import AnalystTask
 from app.agents.graph.state import HedgeFundState
 
 
-def orchestrator_node(state: HedgeFundState) -> dict:
+def orchestrator_node(state: HedgeFundState) -> Mapping[str, object | None]:
     """Create analyst tasks for fan-out execution."""
     log_state("orchestrator:in", state)
     tasks = [

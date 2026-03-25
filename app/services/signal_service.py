@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Protocol, cast
 
 from app.agents.graph.schemas import RiskLimits, SignalInput
 from app.agents.graph.state import HedgeFundState
@@ -6,8 +6,12 @@ from app.agents.graph.workflow import build_graph
 from app.api.schemas.signal import SignalRequest
 
 
-def run_graph_sync(request: SignalRequest) -> dict[str, Any] | Any:
-  graph = build_graph() 
+class _GraphRunner(Protocol):
+  def invoke(self, input: HedgeFundState, /) -> HedgeFundState: ...
+
+
+def run_graph_sync(request: SignalRequest) -> HedgeFundState:
+  graph = cast(_GraphRunner, cast(object, build_graph()))
 
   state: HedgeFundState = {
     "input": SignalInput(
@@ -26,5 +30,4 @@ def run_graph_sync(request: SignalRequest) -> dict[str, Any] | Any:
     "error": None,
   }
 
-  result = graph.invoke(state)
-  return result
+  return graph.invoke(state)
