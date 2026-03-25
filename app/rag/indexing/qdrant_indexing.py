@@ -1,14 +1,14 @@
 import json
 import sys
 from collections.abc import Iterable
+from importlib import import_module
 from pathlib import Path
+from typing import Any
 
 from llama_index.core import SimpleDirectoryReader, VectorStoreIndex
 from llama_index.core.node_parser import SentenceSplitter
 from llama_index.core.schema import Document
 from llama_index.core.storage import StorageContext
-from llama_index.embeddings.openai import OpenAIEmbedding
-from llama_index.vector_stores.qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
 
 try:
@@ -38,10 +38,13 @@ class QdrantIndexing:
         qdrant_url: str = "http://localhost:6333",
         api_key: str = "",
         embedding_model: str = "text-embedding-3-small",
-    ):
-        self.collection_name = collection_name
-        self.client = QdrantClient(url=qdrant_url, api_key=api_key)
-        self.embedding_model = OpenAIEmbedding(model=embedding_model)
+    ) -> None:
+        self.collection_name: str = collection_name
+        self.client: QdrantClient = QdrantClient(url=qdrant_url, api_key=api_key)
+        openai_embedding_cls = getattr(
+            import_module("llama_index.embeddings.openai"), "OpenAIEmbedding"
+        )
+        self.embedding_model: Any = openai_embedding_cls(model=embedding_model)
 
     @staticmethod
     def save_jsonl_snapshot(docs: Iterable[Document], out_path: str) -> None:
@@ -54,7 +57,7 @@ class QdrantIndexing:
                     "text": doc.text,
                     "metadata": doc.metadata,
                 }
-                f.write(json.dumps(row, ensure_ascii=False) + "\n")
+                _ = f.write(json.dumps(row, ensure_ascii=False) + "\n")
 
     def build_qdrant_index(self, docs: list[Document]) -> VectorStoreIndex:
         # 1) Chunking
@@ -62,7 +65,10 @@ class QdrantIndexing:
         nodes = splitter.get_nodes_from_documents(docs)
 
         # 2) Qdrant vector store
-        vector_store = QdrantVectorStore(
+        qdrant_vector_store_cls = getattr(
+            import_module("llama_index.vector_stores.qdrant"), "QdrantVectorStore"
+        )
+        vector_store = qdrant_vector_store_cls(
             client=self.client,
             collection_name=self.collection_name,
             enable_hybrid=True,
@@ -91,7 +97,8 @@ def main() -> None:
     indexer = QdrantIndexing(collection_name=QDRANT_COLLECTION)
     indexer.save_jsonl_snapshot(transformed_docs, str(processed_jsonl_path))
     index = indexer.build_qdrant_index(transformed_docs)
-    qe = index.as_query_engine(
+    index_any: Any = index
+    qe = index_any.as_query_engine(
         vector_store_query_mode="hybrid",
         similarity_top_k=5,
         sparse_top_k=20,

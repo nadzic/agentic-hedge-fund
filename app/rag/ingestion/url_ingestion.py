@@ -1,12 +1,14 @@
 import argparse
 import re
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 import httpx
 from bs4 import BeautifulSoup
 from llama_index.core.schema import Document
-from llama_index.readers.web import SimpleWebPageReader
+from llama_index.readers.web import SimpleWebPageReader  # pyright: ignore[reportMissingTypeStubs]
+from playwright.sync_api import Page
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from playwright.sync_api import sync_playwright
 
@@ -33,7 +35,7 @@ def _looks_like_challenge(text: str) -> bool:
     return any(marker in lowered for marker in CHALLENGE_MARKERS)
 
 
-def _extract_playwright_text(page) -> str:
+def _extract_playwright_text(page: Page) -> str:
     """Extract readable text from likely content containers first."""
     selectors = ("article", "main", "[role='main']", ".article", ".content")
     for selector in selectors:
@@ -61,7 +63,7 @@ def _save_if_requested(path: str, content: str) -> None:
     """Persist content only when an output path is provided."""
     if not path:
         return
-    Path(path).resolve().write_text(content, encoding="utf-8")
+    _ = Path(path).resolve().write_text(content, encoding="utf-8")
 
 
 def ingest_url(
@@ -157,7 +159,7 @@ def ingest_url(
         if manual_wait > 0:
             # Optional wait for manual challenge solving in non-headless mode.
             try:
-                page.wait_for_function(
+                _ = page.wait_for_function(
                     "() => !document.title.toLowerCase().includes('just a moment')",
                     timeout=manual_wait * 1000,
                 )
@@ -171,13 +173,12 @@ def ingest_url(
             context.close()
             browser.close()
             raise RuntimeError(
-                "Challenge page detected. Retry with --no-headless --manual-wait 180 "
-                "and solve verification in the opened browser."
+                "Challenge page detected. Retry with --no-headless --manual-wait 180 and solve verification in the opened browser."
             )
 
         if state_file:
             # Save session for the next run.
-            context.storage_state(path=str(Path(state_file).resolve()))
+            _ = context.storage_state(path=str(Path(state_file).resolve()))
         context.close()
         browser.close()
 
@@ -195,39 +196,79 @@ def ingest_url(
     )
 
 
-def parse_args() -> argparse.Namespace:
+@dataclass(frozen=True)
+class UrlIngestionArgs:
+    url: str
+    url_key: str
+    text_out: str
+    html_out: str
+    headless: bool
+    manual_wait: int
+    state_file: str
+
+
+class _ParsedArgs(argparse.Namespace):
+    url: str
+    url_key: str
+    text_out: str
+    html_out: str
+    headless: bool
+    manual_wait: int
+    state_file: str
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.url = ""
+        self.url_key = ""
+        self.text_out = ""
+        self.html_out = ""
+        self.headless = True
+        self.manual_wait = 0
+        self.state_file = ""
+
+
+def parse_args() -> UrlIngestionArgs:
     parser = argparse.ArgumentParser(
         description=(
             "Ingest one URL with LlamaIndex + Playwright fallback."
         )
     )
-    parser.add_argument("--url", default="", help="URL to ingest.")
-    parser.add_argument(
+    _ = parser.add_argument("--url", default="", help="URL to ingest.")
+    _ = parser.add_argument(
         "--url-key",
         default="",
         choices=sorted(SOURCE_URLS.keys()),
         help="Key from app.rag.core.config.SOURCE_URLS.",
     )
-    parser.add_argument("--text-out", default="", help="Optional output .txt file.")
-    parser.add_argument("--html-out", default="", help="Optional output .html file.")
-    parser.add_argument(
+    _ = parser.add_argument("--text-out", default="", help="Optional output .txt file.")
+    _ = parser.add_argument("--html-out", default="", help="Optional output .html file.")
+    _ = parser.add_argument(
         "--headless",
         action=argparse.BooleanOptionalAction,
         default=True,
         help="Run browser headless (default: true).",
     )
-    parser.add_argument(
+    _ = parser.add_argument(
         "--manual-wait",
         type=int,
         default=0,
         help="Seconds to wait for manual verification in browser.",
     )
-    parser.add_argument(
+    _ = parser.add_argument(
         "--state-file",
         default="",
         help="Optional Playwright storage state file for session reuse.",
     )
-    return parser.parse_args()
+    parsed = parser.parse_args(namespace=_ParsedArgs())
+    return UrlIngestionArgs(
+        url=parsed.url,
+        url_key=parsed.url_key,
+        text_out=parsed.text_out,
+        html_out=parsed.html_out,
+        headless=parsed.headless,
+        manual_wait=parsed.manual_wait,
+        state_file=parsed.state_file,
+    )
 
 
 def main() -> None:
