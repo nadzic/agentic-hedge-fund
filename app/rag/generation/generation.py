@@ -1,15 +1,24 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+import sys
+from pathlib import Path
 
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 from typing_extensions import override
 
-from app.agents.services.llm import get_llm
-from app.rag.core.config import QDRANT_COLLECTION
-from app.rag.retrieval.retrieval import QdrantRetrievalService, RetrievalRequest, RetrievedChunk
+try:
+  from app.agents.services.llm import get_llm
+  from app.rag.core.config import QDRANT_COLLECTION
+  from app.rag.retrieval.retrieval import QdrantRetrievalService, RetrievalRequest, RetrievedChunk
+except ModuleNotFoundError:
+  repo_root = Path(__file__).resolve().parents[3]
+  sys.path.append(str(repo_root))
+  from app.agents.services.llm import get_llm
+  from app.rag.core.config import QDRANT_COLLECTION
+  from app.rag.retrieval.retrieval import QdrantRetrievalService, RetrievalRequest, RetrievedChunk
 
 
 class GenerationRequest(BaseModel):
@@ -92,7 +101,7 @@ class LLMGenerationService(GenerationService):
     ]
 
     response = self.llm.invoke(messages)
-    answer_text = response.text()
+    answer_text = response.text
 
     return GenerationResponse(
       answer=answer_text,

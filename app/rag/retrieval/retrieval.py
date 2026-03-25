@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 import os
+import sys
+from pathlib import Path
 
 from dotenv import load_dotenv
 from llama_index.core import VectorStoreIndex
@@ -111,14 +113,19 @@ class QdrantRetrievalService(RetrievalService):
 
 def main() -> None:
   # Local smoke test for retrieval
-  from app.rag.core.config import QDRANT_COLLECTION
+  try:
+    from app.rag.core.config import QDRANT_COLLECTION
+  except ModuleNotFoundError:
+    repo_root = Path(__file__).resolve().parents[3]
+    sys.path.append(str(repo_root))
+    from app.rag.core.config import QDRANT_COLLECTION
 
   req = RetrievalRequest(
     query="What were NVIDIA gross margins in Q3 FY25?",
     top_k=5,
     sparse_top_k=20,
     alpha=0.5,
-    filters={"source_name": "nvidia"}
+    filters={"symbol": "NVDA"}
   )
 
   retrieval_service = QdrantRetrievalService(collection_name=QDRANT_COLLECTION)

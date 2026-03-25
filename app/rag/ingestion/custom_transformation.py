@@ -14,7 +14,7 @@ except ModuleNotFoundError:
     from app.rag.core.constants import CHALLENGE_MARKERS
 
 class CustomTransformation:
-    def __init__(self, collection_name: str, min_chars: int = 300):
+    def __init__(self, collection_name: str, min_chars: int = 300) -> None:
         self.collection_name: str = collection_name
         self.min_chars: int = min_chars
 
@@ -33,6 +33,51 @@ class CustomTransformation:
         payload = f"{source_id}\n{text}".encode("utf-8", errors="ignore")
         return hashlib.sha256(payload).hexdigest()
 
+    @staticmethod
+    def _infer_source_id(metadata: dict[str, object]) -> str:
+        source_id = str(metadata.get("source_id", "")).strip()
+        if source_id:
+            return source_id
+
+        file_name = str(metadata.get("file_name", "")).strip()
+        if file_name:
+            return Path(file_name).stem
+
+        file_path = str(metadata.get("file_path", "")).strip()
+        if file_path:
+            return Path(file_path).stem
+
+        return "unknown_source_id"
+
+    @staticmethod
+    def _infer_source_name(metadata: dict[str, object]) -> str:
+        source_name = str(metadata.get("source_name", "")).strip()
+        if source_name:
+            return source_name
+
+        file_path = str(metadata.get("file_path", "")).strip()
+        if file_path:
+            parts = [part.lower() for part in Path(file_path).parts]
+            if "raw" in parts:
+                raw_idx = parts.index("raw")
+                if raw_idx + 1 < len(parts):
+                    return parts[raw_idx + 1]
+
+        source_id = str(metadata.get("source_id", "")).strip()
+        if source_id:
+            return source_id
+
+        return "unknown_source"
+
+    @staticmethod
+    def _detect_company(source_hint: str) -> tuple[str, str] | None:
+        hint = source_hint.lower()
+        if "nvidia" in hint or "nvda" in hint:
+            return ("NVDA", "NVIDIA")
+        if "google" in hint or "alphabet" in hint or "googl" in hint:
+            return ("GOOGL", "Alphabet")
+        return None
+
     def transform(self, doc: Document) -> Document | None:
         # filter, enrich metadata
         text = self._normalize_text(doc.text or "")
@@ -43,17 +88,20 @@ class CustomTransformation:
         if len(text) < self.min_chars:
             return None
         metadata: dict[str, object] = dict(doc.metadata or {})
-        source_id = str(metadata.get("source_id", "unknown_source_id"))
+        source_id = self._infer_source_id(metadata)
+        source_name = self._infer_source_name(metadata)
+        metadata["source_id"] = source_id
+        metadata["source_name"] = source_name
         metadata["processed_at"] = datetime.now().isoformat()
         metadata["doc_hash"] = self._build_doc_hash(text, source_id)
         metadata["collection_name"] = self.collection_name
-        source_id = str(metadata.get("source_id", ""))
-        if "nvidia" in source_id.lower():
-            metadata["symbol"] = "NVDA"
-            metadata["company"] = "NVIDIA"
-        if "google" in source_id.lower():
-            metadata["symbol"] = "GOOGL"
-            metadata["company"] = "Alphabet"
+        source_hint = " ".join(
+            str(metadata.get(key, "")).strip()
+            for key in ("source_id", "source_name", "file_name", "file_path")
+        )
+        company_info = self._detect_company(source_hint)
+        if company_info is not None:
+            metadata["symbol"], metadata["company"] = company_info
         return Document(text=text, metadata=metadata)
 
     def transform_documents(self, docs: list[Document]) -> tuple[list[Document], dict[str, int]]:
