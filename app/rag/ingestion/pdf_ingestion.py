@@ -86,7 +86,9 @@ def main() -> None:
     if args.text_out_dir:
         out_dir = Path(args.text_out_dir).resolve()
         out_dir.mkdir(parents=True, exist_ok=True)
-        for idx, doc in enumerate(ingest_pdf_iter(path=args.path, recursive=args.recursive), start=1):
+        for idx, doc in enumerate(
+            ingest_pdf_iter(path=args.path, recursive=args.recursive), start=1
+        ):
             loaded_documents += 1
             total_characters += len(doc.text)
             source = doc.metadata.get("file_name", f"document_{idx}.pdf")

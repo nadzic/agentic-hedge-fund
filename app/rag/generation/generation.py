@@ -47,7 +47,7 @@ class LLMGenerationService(GenerationService):
   def _collect_citations(chunks: list[RetrievedChunk], max_chunks: int) -> list[str]:
     selected = chunks[:max_chunks]
     citations: list[str] = []
-    for index, chunk in enumerate(selected, start=1):
+    for _, chunk in enumerate(selected, start=1):
       src = chunk.doc_hash or chunk.source_id
       if src and src not in citations:
         citations.append(src)
@@ -56,7 +56,12 @@ class LLMGenerationService(GenerationService):
 
   def generate(self, request: GenerationRequest) -> GenerationResponse:
     if not request.retrieved_chunks:
-      return GenerationResponse(answer="No chunks provided", confidence=0.0, citations=[], reasoning="Retrieval returned no chunks")
+      return GenerationResponse(
+        answer="No chunks provided",
+        confidence=0.0,
+        citations=[],
+        reasoning="Retrieval returned no chunks"
+      )
 
     context_text = self._build_context(request.retrieved_chunks, request.max_context_chunks)
     citations = self._collect_citations(request.retrieved_chunks, request.max_context_chunks)
@@ -97,10 +102,26 @@ class LLMGenerationService(GenerationService):
 
 def main() -> None:
   retreival = QdrantRetrievalService(collection_name=QDRANT_COLLECTION)
-  chunks = retreival.retrieve(request=RetrievalRequest(query="What were NVIDIA gross margins in Q3 FY25?", top_k=5, sparse_top_k=20, alpha=0.5, filters={"source_name": "nvidia"}))
+  chunks = retreival.retrieve(
+      request=RetrievalRequest(
+          query="What were NVIDIA gross margins in Q3 FY25?",
+          top_k=5,
+          sparse_top_k=20,
+          alpha=0.5,
+          filters={"source_name": "nvidia"},
+      )
+  )
   
   generation = LLMGenerationService(llm=get_llm())
-  response = generation.generate(request=GenerationRequest(query="What were NVIDIA gross margins in Q3 FY25?", symbol="NVDA", horizon="swing", retrieved_chunks=chunks, max_context_chunks=5))
+  response = generation.generate(
+      request=GenerationRequest(
+          query="What were NVIDIA gross margins in Q3 FY25?",
+          symbol="NVDA",
+          horizon="swing",
+          retrieved_chunks=chunks,
+          max_context_chunks=5,
+      )
+  )
 
   print(f"Answer: {response.answer}")
   print(f"Confidence: {response.confidence}")
