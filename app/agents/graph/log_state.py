@@ -1,5 +1,7 @@
 import logging
+
 from app.agents.graph.state import HedgeFundState, WorkerState
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 

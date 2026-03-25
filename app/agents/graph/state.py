@@ -1,23 +1,31 @@
-from typing import Annotated, Optional, TypedDict
 import operator
-from app.agents.graph.schemas import SignalInput, AnalystTask, RiskLimits, SuggestionOutput, AnalystOutput
- 
+from typing import Annotated, TypedDict
+
+from app.agents.graph.schemas import (
+  AnalystOutput,
+  AnalystTask,
+  RiskLimits,
+  SignalInput,
+  SuggestionOutput,
+)
+
+
 class HedgeFundState(TypedDict):
   # user/request input
   input: SignalInput
 
   # optional risk limits
-  risk_limits: Optional[RiskLimits]
+  risk_limits: RiskLimits | None
 
   # Node outputs
-  suggestion: Optional[SuggestionOutput]
+  suggestion: SuggestionOutput | None
 
   # analyst tasks
   analyst_tasks: list[AnalystTask]
 
   # diagnostics
-  warning: Optional[str]
-  error: Optional[str]
+  warning: str | None
+  error: str | None
 
   # analyst outputs
   analyst_outputs: Annotated[list[AnalystOutput], operator.add]

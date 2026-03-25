@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 
 from app.rag.retrieval.retrieval import RetrievedChunk
 
+
 class RerankingRequest(BaseModel):
   query: str
   retrieved_chunks: list[RetrievedChunk]

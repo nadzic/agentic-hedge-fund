@@ -1,5 +1,6 @@
+
 from pydantic import BaseModel, Field
-from typing import Optional
+
 
 class SignalRequest(BaseModel):
   query: str = Field(..., description="User request")
@@ -11,5 +12,5 @@ class SignalResponse(BaseModel):
   signal: str
   confidence: float = Field(..., ge=0, le=1)
   reasoning: str
-  warning: Optional[str] = None
-  error: Optional[str] = None
+  warning: str | None = None
+  error: str | None = None

@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.rag.core.config import QDRANT_COLLECTION
-from app.rag.retrieval.retrieval import QdrantRetrievalService, RetrievedChunk, RetrievalRequest
+from app.rag.retrieval.retrieval import QdrantRetrievalService, RetrievalRequest, RetrievedChunk
 
 _retrieval_service: QdrantRetrievalService | None = None
 

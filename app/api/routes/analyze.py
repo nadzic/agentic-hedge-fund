@@ -1,8 +1,8 @@
-from fastapi import APIRouter
-from app.api.schemas.signal import SignalResponse, SignalRequest
-from starlette.concurrency import run_in_threadpool
-from app.services.signal_service import run_graph_sync
 from fastapi import APIRouter, HTTPException
+from starlette.concurrency import run_in_threadpool
+
+from app.api.schemas.signal import SignalRequest, SignalResponse
+from app.services.signal_service import run_graph_sync
 
 router = APIRouter()
 

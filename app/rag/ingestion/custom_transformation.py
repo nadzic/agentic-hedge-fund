@@ -1,12 +1,10 @@
-import os
-import json
 import hashlib
 import sys
-from llama_index.core.schema import Document
-from llama_index.core.node_parser import SentenceWindowNodeParser
-from llama_index.core import SimpleDirectoryReader
 from datetime import datetime
 from pathlib import Path
+
+from llama_index.core import SimpleDirectoryReader
+from llama_index.core.schema import Document
 
 try:
     from app.rag.core.constants import CHALLENGE_MARKERS

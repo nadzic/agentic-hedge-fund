@@ -1,9 +1,10 @@
 from typing import Any
-from app.api.schemas.signal import SignalRequest
-from app.agents.graph.workflow import build_graph
+
+from app.agents.graph.schemas import RiskLimits, SignalInput
 from app.agents.graph.state import HedgeFundState
-from app.agents.graph.schemas import SignalInput
-from app.agents.graph.schemas import RiskLimits
+from app.agents.graph.workflow import build_graph
+from app.api.schemas.signal import SignalRequest
+
 
 def run_graph_sync(request: SignalRequest) -> dict[str, Any] | Any:
   graph = build_graph() 

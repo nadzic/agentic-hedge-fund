@@ -1,6 +1,7 @@
 from enum import Enum
+from typing import Literal
+
 from pydantic import BaseModel, Field
-from typing import Literal, Optional, Union
 
 AnalystName = Literal["fundamentals", "technicals", "valuation", "sentiment"]
 
@@ -28,8 +29,8 @@ class SuggestionOutput(BaseModel):
   confidence: float = Field(..., ge=0, le=1)
   reasoning: str
   suggested_position_pct: float = Field(..., ge=0, le=1)
-  stop_loss_pct: Optional[float] = Field(None, ge=0, le=1)
-  take_profit_pct: Optional[float] = Field(None, ge=0, le=2)
+  stop_loss_pct: float | None = Field(None, ge=0, le=1)
+  take_profit_pct: float | None = Field(None, ge=0, le=2)
   disclaimer: str = "Educational output only. Not financial advice."
 
 class AnalystOutput(BaseModel):
@@ -37,4 +38,4 @@ class AnalystOutput(BaseModel):
   signal: Signal
   confidence: float = Field(..., ge=0, le=1)
   reasoning: str
-  metrics: dict[str, Union[float, int, str]]
+  metrics: dict[str, float | int | str]

@@ -13,6 +13,7 @@ from app.agents.graph.schemas import RiskLimits, SignalInput
 from app.agents.graph.state import HedgeFundState
 from app.agents.graph.workflow import build_graph
 
+
 def main() -> None:
     graph = build_graph()
     state: HedgeFundState = {

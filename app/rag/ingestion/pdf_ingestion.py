@@ -6,6 +6,7 @@ from llama_index.core import SimpleDirectoryReader
 from llama_index.core.schema import Document
 from llama_index.readers.file import PDFReader
 
+
 def _add_pdf_metadata(doc: Document, fallback_source: Path) -> Document:
     metadata = doc.metadata or {}
     file_path = metadata.get("file_path")

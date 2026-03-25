@@ -2,12 +2,14 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from typing import Any
-from pydantic import BaseModel, Field
-from qdrant_client import QdrantClient
+
+from llama_index.core import VectorStoreIndex
+from llama_index.core.vector_stores import FilterOperator, MetadataFilter, MetadataFilters
 from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.vector_stores.qdrant import QdrantVectorStore
-from llama_index.core import VectorStoreIndex
-from llama_index.core.vector_stores import MetadataFilter, MetadataFilters, FilterOperator
+from pydantic import BaseModel, Field
+from qdrant_client import QdrantClient
+
 
 class RetrievalRequest(BaseModel):
   query: str

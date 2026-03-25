@@ -6,9 +6,10 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 
-from app.rag.core.config import QDRANT_COLLECTION
-from app.rag.retrieval.retrieval import QdrantRetrievalService, RetrievedChunk, RetrievalRequest
 from app.agents.services.llm import get_llm
+from app.rag.core.config import QDRANT_COLLECTION
+from app.rag.retrieval.retrieval import QdrantRetrievalService, RetrievalRequest, RetrievedChunk
+
 
 class GenerationRequest(BaseModel):
   query: str
