@@ -1,7 +1,7 @@
 FROM ghcr.io/astral-sh/uv:python3.11-bookworm
 
 # Base image for building Python 3.11 apps with uv (faster Python package installer and manager)
-workdir /app
+WORKDIR /app
 
 # Install deps first (better layer caching)
 COPY pyproject.toml uv.lock* ./

@@ -35,6 +35,21 @@ services:
         target: /qdrant/config/production.yaml
     volumes:
       - ./qdrant_data:/qdrant/storage
+  frontend:
+    build:
+      context: ./app/frontend
+      dockerfile: Dockerfile
+    container_name: agentic-hedge-fund-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+    depends_on:
+      - api
+    volumes:
+      - ./app/frontend:/app
+      - /app/node_modules
+
 configs:
   qdrant_config:
     content: |
