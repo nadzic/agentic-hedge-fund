@@ -14,6 +14,7 @@ from llama_index.vector_stores.qdrant import QdrantVectorStore
 from pydantic import BaseModel, Field
 from qdrant_client import QdrantClient
 from typing_extensions import override
+from app.observability.tracing import observe
 
 load_dotenv()
 
@@ -84,6 +85,7 @@ class QdrantRetrievalService(RetrievalService):
     )
 
   @override
+  @observe(name="rag.retrieval.qdrant.retrieve")
   def retrieve(self, request: RetrievalRequest) -> list[RetrievedChunk]:
     llama_filters = self._to_llama_filters(request.filters)
 

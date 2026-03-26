@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from pydantic import BaseModel, Field
 
 from app.rag.retrieval.retrieval import RetrievedChunk
-
+from app.observability.tracing import observe
 
 class RerankingRequest(BaseModel):
   query: str
@@ -33,6 +33,7 @@ class CrossEncoderRerankingService(RerankingService):
 
     self.model: CrossEncoder = CrossEncoder(model_name)
 
+  @observe(name="rag.reranking.cross_encoder.rerank")
   def rerank(self, request: RerankingRequest) -> list[RetrievedChunk]:
     chunks = request.retrieved_chunks
     if not chunks:

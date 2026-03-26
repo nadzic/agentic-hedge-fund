@@ -4,12 +4,14 @@ from app.agents.services.llm import get_llm
 from app.rag.reranking.reranking import RerankingService
 from app.rag.generation.generation import (
   GenerationRequest,
+  GenerationResponse,
   GenerationService,
   LLMGenerationService,
 )
 from app.rag.reranking.reranking import RerankingRequest
 from app.rag.retrieval.retrieval import (
   QdrantRetrievalService,
+  RetrievedChunk,
   RetrievalRequest,
   RetrievalService,
 )
@@ -50,6 +52,23 @@ class RagQueryPipeline:
 
   @observe(name="rag.query.pipeline.run")
   def run(self, request: QueryPipelineRequest) -> QueryPipelineResult:
+    chunks = self._retrieve(request)
+
+    if self.rerank_enabled and self.reranking_service is not None and chunks:
+      chunks = self._rerank(query=request.query, chunks=chunks)
+
+    generation_response = self._generate(request=request, chunks=chunks)
+
+    return QueryPipelineResult(
+      answer=generation_response.answer,
+      confidence=generation_response.confidence,
+      citations=generation_response.citations,
+      reasoning=generation_response.reasoning,
+      retrieved_chunks=chunks,
+    )
+
+  @observe(name="rag.query.pipeline.retrieve")
+  def _retrieve(self, request: QueryPipelineRequest) -> list[RetrievedChunk]:
     filters = dict(request.extra_filters or {})
     _ = filters.setdefault("symbol", request.symbol.upper())
 
@@ -60,18 +79,27 @@ class RagQueryPipeline:
       alpha=request.alpha,
       filters=filters
     )
-    chunks = self.retrieval_service.retrieve(retrieval_request)
+    return self.retrieval_service.retrieve(retrieval_request)
 
-    if self.rerank_enabled and self.reranking_service is not None and chunks:
-      rerank_k = min(self.rerank_top_k, len(chunks))
-      chunks = self.reranking_service.rerank(
-        request=RerankingRequest(
-          query=request.query,
-          retrieved_chunks=chunks,
-          top_k=rerank_k,
-        )
+  @observe(name="rag.query.pipeline.rerank")
+  def _rerank(self, query: str, chunks: list[RetrievedChunk]) -> list[RetrievedChunk]:
+    if self.reranking_service is None or not chunks:
+      return chunks
+    rerank_k = min(self.rerank_top_k, len(chunks))
+    return self.reranking_service.rerank(
+      request=RerankingRequest(
+        query=query,
+        retrieved_chunks=chunks,
+        top_k=rerank_k,
       )
+    )
 
+  @observe(name="rag.query.pipeline.generate")
+  def _generate(
+    self,
+    request: QueryPipelineRequest,
+    chunks: list[RetrievedChunk],
+  ) -> GenerationResponse:
     generation_request = GenerationRequest(
       query=request.query,
       symbol=request.symbol.upper(),
@@ -79,12 +107,4 @@ class RagQueryPipeline:
       retrieved_chunks=chunks,
       max_context_chunks=request.max_context_chunks
     )
-    generation_response = self.generation_service.generate(generation_request)
-
-    return QueryPipelineResult(
-      answer=generation_response.answer,
-      confidence=generation_response.confidence,
-      citations=generation_response.citations,
-      reasoning=generation_response.reasoning,
-      retrieved_chunks=chunks,
-    )
+    return self.generation_service.generate(generation_request)

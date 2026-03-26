@@ -9,6 +9,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 from typing_extensions import override
 
+from app.observability.tracing import observe
 try:
   from app.agents.services.llm import get_llm
   from app.rag.core.config import QDRANT_COLLECTION
@@ -64,6 +65,7 @@ class LLMGenerationService(GenerationService):
     return citations
 
   @override
+  @observe(name="rag.generation.llm.generate")
   def generate(self, request: GenerationRequest) -> GenerationResponse:
     if not request.retrieved_chunks:
       return GenerationResponse(
