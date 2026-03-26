@@ -1,4 +1,9 @@
+import os
+
+from dotenv import load_dotenv
 """RAG source URL configuration constants."""
+
+_ = load_dotenv()
 
 NASDAQ_RARE_EARTH_BATTLEFIELD_2026 = (
     "https://www.nasdaq.com/press-release/why-rare-earth-magnets-are-real-battlefield-"
@@ -61,3 +66,8 @@ QDRANT_COLLECTION = "company_docs"
 
 CHUNK_SIZE = 800
 CHUNK_OVERLAP = 160
+
+RERANK_ENABLED = os.getenv("RERANK_ENABLED", "true").lower() == "true"
+RERANK_TOP_K = int(os.getenv("RERANK_TOP_K", "10"))
+RERANK_LEXICAL_WEIGHT = float(os.getenv("RERANK_LEXICAL_WEIGHT", "0.35"))
+RERANK_RETRIEVAL_WEIGHT = float(os.getenv("RERANK_RETRIEVAL_WEIGHT", "0.65"))
