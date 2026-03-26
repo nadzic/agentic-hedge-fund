@@ -24,7 +24,7 @@ class RagQueryPipeline:
     self,
     retrieval_service: RetrievalService,
     generation_service: GenerationService,
-    reranking_service: RerankingService,
+    reranking_service: RerankingService | None = None,
     rerank_enabled: bool = True,
     rerank_top_k: int = 10,
   ) -> None:
@@ -36,7 +36,7 @@ class RagQueryPipeline:
     
   @classmethod
   def default(cls, collection_name: str,
-    reranking_service: RerankingService,
+    reranking_service: RerankingService | None = None,
     rerank_enabled: bool = True,
     rerank_top_k: int = 10,
   ) -> "RagQueryPipeline":

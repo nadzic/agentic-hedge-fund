@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-from app.rag.core.config import QDRANT_COLLECTION, RERANK_ENABLED, RERANK_TOP_K
+from app.rag.core.config import (
+  QDRANT_COLLECTION,
+  RERANK_ENABLED,
+  RERANK_MODEL_NAME,
+  RERANK_TOP_K,
+)
 from app.rag.pipelines.ingest_index_pipeline import IngestIndexPipeline
 from app.rag.pipelines.query_pipeline import RagQueryPipeline
 from app.rag.reranking.reranking import CrossEncoderRerankingService
@@ -19,7 +24,11 @@ def get_ingest_index_pipeline() -> IngestIndexPipeline:
 def get_query_pipeline() -> RagQueryPipeline:
   global _query_pipeline
   if _query_pipeline is None:
-    reranker = CrossEncoderRerankingService()
+    reranker = (
+      CrossEncoderRerankingService(model_name=RERANK_MODEL_NAME)
+      if RERANK_ENABLED
+      else None
+    )
     _query_pipeline = RagQueryPipeline.default(
         collection_name=QDRANT_COLLECTION,
         reranking_service=reranker,
