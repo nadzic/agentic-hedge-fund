@@ -14,6 +14,7 @@ from app.rag.retrieval.retrieval import (
   RetrievalService,
 )
 from app.rag.pipelines.types import QueryPipelineRequest, QueryPipelineResult
+from app.observability.tracing import observe
 
 
 class RagQueryPipeline:
@@ -47,6 +48,7 @@ class RagQueryPipeline:
       rerank_top_k=rerank_top_k,
     )
 
+  @observe(name="rag.query.pipeline.run")
   def run(self, request: QueryPipelineRequest) -> QueryPipelineResult:
     filters = dict(request.extra_filters or {})
     _ = filters.setdefault("symbol", request.symbol.upper())

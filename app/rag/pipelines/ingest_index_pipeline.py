@@ -9,9 +9,11 @@ from app.rag.ingestion.pdf_ingestion import ingest_pdf
 from app.rag.ingestion.url_ingestion import ingest_url
 from app.rag.indexing.qdrant_indexing import QdrantIndexing
 from app.rag.pipelines.types import IngestIndexRequest, IngestIndexResult
+from app.observability.tracing import observe
 
 
 class IngestIndexPipeline:
+  @observe(name="rag.ingest.index.pipeline.run")
   def run(self, request: IngestIndexRequest) -> IngestIndexResult:
     raw_docs: list[Document] = []
 

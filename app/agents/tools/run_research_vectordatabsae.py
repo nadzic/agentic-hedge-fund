@@ -7,6 +7,7 @@ from app.rag.retrieval.retrieval import (
   RetrievalRequest,
   RetrievedChunk,
 )
+from app.observability.tracing import observe
 
 _retrieval_service: QdrantRetrievalService | None = None
 
@@ -16,6 +17,7 @@ def _get_retrieval_service() -> QdrantRetrievalService:
     _retrieval_service = QdrantRetrievalService(collection_name=QDRANT_COLLECTION)
   return _retrieval_service
 
+@observe(name="agents.tools.run_research_vectordatabase")
 def run_research_vectordatabase(
     query: str,
     symbol: str | None = None,

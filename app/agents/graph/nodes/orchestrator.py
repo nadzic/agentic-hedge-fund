@@ -7,8 +7,10 @@ from langgraph.types import Send
 from app.agents.graph.log_state import log_state
 from app.agents.graph.schemas import AnalystTask
 from app.agents.graph.state import HedgeFundState
+from app.observability.tracing import observe
 
 
+@observe(name="agents.graph.nodes.orchestrator.orchestrator_node")
 def orchestrator_node(state: HedgeFundState) -> Mapping[str, object | None]:
     """Create analyst tasks for fan-out execution."""
     log_state("orchestrator:in", state)
@@ -23,6 +25,7 @@ def orchestrator_node(state: HedgeFundState) -> Mapping[str, object | None]:
     return out
 
 
+@observe(name="agents.graph.nodes.orchestrator.assign_workers")
 def assign_workers(state: HedgeFundState):
     """Route each task to its analyst-specific node."""
     task_to_node = {

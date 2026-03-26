@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from app.agents.graph.schemas import Signal, SuggestionOutput
 from app.agents.graph.state import HedgeFundState
+from app.observability.tracing import observe
 
-
+@observe(name="agents.graph.nodes.synthesizer.synthesizer_node")
 def synthesizer_node(state: HedgeFundState) -> dict[str, SuggestionOutput]:
     """Combine analyst outputs into one suggestion (placeholder)."""
     outputs = state.get("analyst_outputs", [])
