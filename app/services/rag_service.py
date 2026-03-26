@@ -10,8 +10,10 @@ from app.rag.pipelines import (
   get_ingest_index_pipeline,
   get_query_pipeline,
 )
+from app.observability.tracing import observe
 
 
+@observe(name="api.rag.ingest_index")
 def run_rag_ingest_index_sync(request: RagIngestIndexRequest) -> RagIngestIndexResponse:
   pipeline = get_ingest_index_pipeline()
   result = pipeline.run(
@@ -34,7 +36,7 @@ def run_rag_ingest_index_sync(request: RagIngestIndexRequest) -> RagIngestIndexR
     collection_name=result.collection_name,
   )
 
-
+@observe(name="api.rag.query")
 def run_rag_query_sync(request: RagQueryRequest) -> RagQueryResponse:
   pipeline = get_query_pipeline()
   result = pipeline.run(

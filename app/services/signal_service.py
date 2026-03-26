@@ -4,6 +4,7 @@ from app.agents.graph.schemas import RiskLimits, SignalInput
 from app.agents.graph.state import HedgeFundState
 from app.agents.graph.workflow import build_graph
 from app.api.schemas.signal import SignalRequest, SignalResponse
+from app.observability.tracing import observe
 
 
 class _GraphRunner(Protocol):
@@ -33,6 +34,7 @@ def _run_graph_sync(request: SignalRequest) -> HedgeFundState:
   return graph.invoke(state)
 
 
+@observe(name="api.signal.analyze")
 def run_signal_sync(request: SignalRequest) -> SignalResponse:
   result = _run_graph_sync(request)
   suggestion = result.get("suggestion")
