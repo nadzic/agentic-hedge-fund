@@ -69,5 +69,4 @@ CHUNK_OVERLAP = 160
 
 RERANK_ENABLED = os.getenv("RERANK_ENABLED", "true").lower() == "true"
 RERANK_TOP_K = int(os.getenv("RERANK_TOP_K", "10"))
-RERANK_LEXICAL_WEIGHT = float(os.getenv("RERANK_LEXICAL_WEIGHT", "0.35"))
-RERANK_RETRIEVAL_WEIGHT = float(os.getenv("RERANK_RETRIEVAL_WEIGHT", "0.65"))
+RERANK_MODEL_NAME = os.getenv("RERANK_MODEL_NAME", "BAAI/bge-reranker-base")
