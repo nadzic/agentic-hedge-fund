@@ -57,10 +57,10 @@ def technicals_analyst_node(state: WorkerState) -> dict[str, list[AnalystOutput]
 
     if has_bullish_keywords:
         signal = Signal.BUY
-        confidence = 0.95
+        confidence = 0.80
     elif has_bearish_keywords:
         signal = Signal.SELL
-        confidence = 0.05
+        confidence = 0.20
     else:
         signal = Signal.HOLD
         confidence = 0.50
@@ -92,10 +92,10 @@ def valuation_analyst_node(state: WorkerState) -> dict[str, list[AnalystOutput]]
 
     if has_bullish_keywords:
         signal = Signal.BUY
-        confidence = 0.95
+        confidence = 0.70
     elif has_bearish_keywords:
         signal = Signal.SELL
-        confidence = 0.05
+        confidence = 0.30
     else:
         signal = Signal.HOLD
         confidence = 0.50
@@ -128,10 +128,10 @@ def sentiment_analyst_node(state: WorkerState) -> dict[str, list[AnalystOutput]]
 
     if has_bullish_keywords:
         signal = Signal.BUY
-        confidence = 0.95
+        confidence = 0.85
     elif has_bearish_keywords:
         signal = Signal.SELL
-        confidence = 0.05
+        confidence = 0.15
     else:
         signal = Signal.HOLD
         confidence = 0.50
