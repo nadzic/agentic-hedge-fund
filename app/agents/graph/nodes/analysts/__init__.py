@@ -1,17 +1,25 @@
 from __future__ import annotations
 
-from app.agents.graph.schemas import AnalystOutput
+from app.agents.graph.schemas import AnalystOutput, Signal
 from app.agents.graph.state import WorkerState
 from app.observability.tracing import observe
-from app.agents.graph.schemas import Signal
-from app.agents.services.technicals.technicals import run_technicals_analysis
-from app.agents.services.technicals.technicals_reasoning import generate_technical_narrative
+
+from .fundamental_analyst import fundamentals_analyst_node
+from .technical_analyst import technicals_analyst_node
+
 
 def _mock_is_bullish_or_bearish(query: str) -> tuple[bool, bool]:
     lower_query = query.lower()
-    has_bullish_keywords = any(keyword in lower_query for keyword in ["bullish", "buy", "up", "positive", "growth", "opportunity", "potential"])
-    has_bearish_keywords = any(keyword in lower_query for keyword in ["bearish", "sell", "down", "negative", "decline", "risk", "concern"])
+    has_bullish_keywords = any(
+        keyword in lower_query
+        for keyword in ["bullish", "buy", "up", "positive", "growth", "opportunity", "potential"]
+    )
+    has_bearish_keywords = any(
+        keyword in lower_query
+        for keyword in ["bearish", "sell", "down", "negative", "decline", "risk", "concern"]
+    )
     return has_bullish_keywords, has_bearish_keywords
+
 
 @observe(name="agents.graph.nodes.analysts.valuation_analyst_node")
 def valuation_analyst_node(state: WorkerState) -> dict[str, list[AnalystOutput]]:
@@ -38,19 +46,18 @@ def valuation_analyst_node(state: WorkerState) -> dict[str, list[AnalystOutput]]
     return {
         "analyst_outputs": [
             AnalystOutput(
-                    analyst="valuation",
-                    signal=signal,
-                    confidence=confidence,
-                    reasoning=reasoning,
-                    metrics={"valuation_score": confidence},
-                )
-            ]
-        }
+                analyst="valuation",
+                signal=signal,
+                confidence=confidence,
+                reasoning=reasoning,
+                metrics={"valuation_score": confidence},
+            )
+        ]
+    }
 
 
 @observe(name="agents.graph.nodes.analysts.sentiment_analyst_node")
 def sentiment_analyst_node(state: WorkerState) -> dict[str, list[AnalystOutput]]:
-    """Analyze sentiment of a given query and symbol."""
     symbol = state["input"].symbol
     query = state["input"].query
 
@@ -82,3 +89,11 @@ def sentiment_analyst_node(state: WorkerState) -> dict[str, list[AnalystOutput]]
             )
         ]
     }
+
+
+__all__ = [
+    "fundamentals_analyst_node",
+    "sentiment_analyst_node",
+    "technicals_analyst_node",
+    "valuation_analyst_node",
+]
