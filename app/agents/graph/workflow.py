@@ -1,15 +1,18 @@
 # pyright: reportMissingTypeStubs=false, reportUnknownMemberType=false
 from langgraph.graph import END, START, StateGraph
 
-from app.agents.graph.nodes import (
-    assign_workers,
+
+from app.agents.graph.nodes.analysts import (
     fundamentals_analyst_node,
-    orchestrator_node,
-    risk_manager_node,
-    sentiment_analyst_node,
-    synthesizer_node,
     technicals_analyst_node,
     valuation_analyst_node,
+    sentiment_analyst_node,
+)
+from app.agents.graph.nodes import (
+    assign_workers,
+    orchestrator_node,
+    risk_manager_node,
+    synthesizer_node,
 )
 from app.agents.graph.state import HedgeFundState
 

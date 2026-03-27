@@ -12,13 +12,9 @@ def _choose_signal(outputs: list[AnalystOutput]) -> tuple[Signal, dict[Signal, f
     for output in outputs:
         score_by_signal[output.signal] += output.confidence
 
-    print(f"Score by signal: {score_by_signal}")
-
     # Deterministic tie-break order (important for stable behavior)
     priority = [Signal.BUY, Signal.SELL, Signal.HOLD, Signal.NO_TRADE]
     best_signal = max(priority, key=lambda signal: score_by_signal[signal])
-    print(f"Best signal: {best_signal}")
-    print(f"Score by signal: {score_by_signal}")
     return best_signal, score_by_signal
 
 def _consensus_ratio(outputs: list[AnalystOutput], chosen_signal: Signal) -> float:
