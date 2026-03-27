@@ -36,5 +36,6 @@ class HedgeFundState(TypedDict):
 # aggregation of outputs across multiple workers in the graph workflow.
 
 class WorkerState(TypedDict):
+  input: SignalInput
   analyst_task: AnalystTask
   analyst_outputs: Annotated[list[AnalystOutput], operator.add]

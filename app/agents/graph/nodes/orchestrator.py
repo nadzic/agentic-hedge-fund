@@ -32,6 +32,12 @@ def assign_workers(state: HedgeFundState):
         "sentiment": "sentiment_analyst_node",
     }
     return [
-        Send(task_to_node[task.analyst], {"analyst_task": task})
+        Send(
+            task_to_node[task.analyst],
+            {
+                "analyst_task": task,
+                "input": state["input"],
+            },
+        )
         for task in state["analyst_tasks"]
     ]
