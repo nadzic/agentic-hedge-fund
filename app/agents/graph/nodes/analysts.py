@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from app.agents.graph.nodes.common import placeholder_output
 from app.agents.graph.schemas import AnalystOutput
 from app.agents.graph.state import WorkerState
 from app.observability.tracing import observe
