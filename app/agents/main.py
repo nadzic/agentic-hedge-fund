@@ -13,6 +13,24 @@ if __package__ is None or __package__ == "":
 from app.agents.graph.schemas import RiskLimits, SignalInput
 from app.agents.graph.state import HedgeFundState
 from app.agents.graph.workflow import build_graph
+from pydantic import BaseModel
+import json
+from typing import Any
+
+def _to_jsonable(value: Any) -> Any:
+    """Recursively convert Pydantic/models/containers to JSON-serializable objects."""
+    if isinstance(value, BaseModel):
+        return value.model_dump(mode="json")
+    if isinstance(value, dict):
+        return {str(k): _to_jsonable(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_to_jsonable(v) for v in value]
+    if isinstance(value, tuple):
+        return [_to_jsonable(v) for v in value]
+    return value
+def _print_json(title: str, payload: Any) -> None:
+    print(f"\n=== {title} ===")
+    print(json.dumps(_to_jsonable(payload), indent=2, ensure_ascii=False))
 
 
 class _GraphRunner(Protocol):
@@ -35,7 +53,13 @@ def main() -> None:
         "error": None,
     }
 
+    # 1) Step-by-step trace (delta updates after each node)
+    for idx, chunk in enumerate(cast(Any, graph).stream(state, stream_mode="updates"), start=1):
+         _print_json(f"STREAM UPDATE #{idx}", chunk)
+
+    # 2) Final state snapshot
     result: HedgeFundState = graph.invoke(state)
+    _print_json("FINAL STATE", result)
 
     suggestion = result.get("suggestion")
     print("=== AI Hedge Fund MVP ===")
@@ -45,7 +69,7 @@ def main() -> None:
     if suggestion is None:
         print("suggestion: None")
     else:
-        print("suggestion:", suggestion.model_dump(mode="json"))
+        _print_json("FINAL SUGGESTION", suggestion)
 
 
 if __name__ == "__main__":
