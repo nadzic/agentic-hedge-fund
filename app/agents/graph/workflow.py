@@ -13,6 +13,9 @@ from app.agents.graph.nodes import (
     orchestrator_node,
     risk_manager_node,
     synthesizer_node,
+    request_clarification_node,
+    input_classifier_node,
+    route_after_classification,
 )
 from app.agents.graph.state import HedgeFundState
 
@@ -20,6 +23,8 @@ from app.agents.graph.state import HedgeFundState
 def build_graph():
     graph = StateGraph(HedgeFundState)
 
+    _ = graph.add_node("input_classifier", input_classifier_node)
+    _ = graph.add_node("request_clarification", request_clarification_node)
     _ = graph.add_node("orchestrator", orchestrator_node)
     _ = graph.add_node("fundamentals_analyst_node", fundamentals_analyst_node)
     _ = graph.add_node("technicals_analyst_node", technicals_analyst_node)
@@ -28,7 +33,16 @@ def build_graph():
     _ = graph.add_node("synthesizer", synthesizer_node)
     _ = graph.add_node("risk_manager", risk_manager_node)
 
-    _ = graph.add_edge(START, "orchestrator")
+
+    _ = graph.add_edge(START, "input_classifier")
+    _ = graph.add_conditional_edges(
+        "input_classifier",
+        route_after_classification,
+        [
+            "request_clarification",
+            "orchestrator",
+        ],
+    )
     _ = graph.add_conditional_edges(
         "orchestrator",
         assign_workers,

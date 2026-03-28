@@ -8,6 +8,21 @@ from app.agents.graph.schemas import AnalystTask
 from app.agents.graph.state import HedgeFundState
 from app.observability.tracing import observe
 
+MAG7 = { 
+    "AAPL",
+    "MSFT",
+    "GOOGL",
+    "META",
+    "NVDA",
+    "TSLA",
+    "AMZN",
+}
+
+def should_use_rag(state: HedgeFundState) -> str:
+    symbol = state["input"].symbol.upper().strip()
+    if symbol in MAG7:
+        return "use_rag"
+    return "skip_rag"
 
 @observe(name="agents.graph.nodes.orchestrator.orchestrator_node")
 def orchestrator_node(state: HedgeFundState) -> Mapping[str, object | None]:

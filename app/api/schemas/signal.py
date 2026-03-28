@@ -1,11 +1,12 @@
 
 from pydantic import BaseModel, Field
+from typing import Literal
 
 
 class SignalRequest(BaseModel):
-  query: str = Field(..., description="User request")
+  query: str = Field(..., min_length=15, description="User request")
   symbol: str = Field(..., description="Ticket symbol, e.g. APPL")
-  horizon: str = Field("swing", description="swing | intraday | position")
+  horizon: Literal["intraday", "swing", "position"] = "swing"
 
 class SignalResponse(BaseModel):
   symbol: str
