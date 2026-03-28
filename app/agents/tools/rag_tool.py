@@ -2,7 +2,9 @@ from __future__ import annotations
 import json
 from typing import Any
 from langchain.tools import tool
+from pydantic import BaseModel
 from app.observability.tracing import observe
+from typing import Literal
 from app.rag.core.config import QDRANT_COLLECTION
 from app.rag.retrieval.retrieval import (
     FilterValue,
@@ -10,6 +12,23 @@ from app.rag.retrieval.retrieval import (
     RetrievalRequest,
 )
 _retrieval_service: QdrantRetrievalService | None = None
+
+class RagChunk(BaseModel):
+    rank: int
+    score: float | None
+    text: str
+    source_id: str | None = None
+    source_type: str | None = None
+    symbol: str | None = None
+    url: str | None = None
+
+class RagToolResult(BaseModel):
+    status: Literal["ok", "error"]
+    query: str
+    symbol: str | None
+    count: int
+    chunks: list[RagChunk]
+    error: str | None = None
 
 def _get_retrieval_service() -> QdrantRetrievalService:
     global _retrieval_service
@@ -43,36 +62,33 @@ def rag_tool(
             filters=filters,
         )
         chunks = _get_retrieval_service().retrieve(request)
-        compact_chunks: list[dict[str, Any]] = []
+        compact_chunks: list[RagChunk] = []
         for idx, chunk in enumerate(chunks[:8], start=1):
             metadata = chunk.metadata or {}
-            compact_chunks.append(
-                {
-                    "rank": idx,
-                    "score": chunk.score,
-                    "text": chunk.text[:600],
-                    "source_id": metadata.get("source_id"),
-                    "source_type": metadata.get("source_type"),
-                    "symbol": metadata.get("symbol"),
-                    "url": metadata.get("url"),
-                }
-            )
-        payload = {
-            "status": "ok",
-            "query": query,
-            "symbol": symbol.upper() if symbol else None,
-            "count": len(compact_chunks),
-            "chunks": compact_chunks,
-        }
-        return json.dumps(payload)
+            symbol = str(metadata.get("symbol"))
+            if symbol:
+                compact_chunks.append(RagChunk(
+                    rank=idx,
+                    score=chunk.score,
+                    text=chunk.text[:600],
+                    source_id=str(metadata.get("source_id")) if metadata.get("source_id") else None,
+                    source_type=str(metadata.get("source_type")) if metadata.get("source_type") else None,
+                    symbol=symbol,
+                    url=str(metadata.get("url")) if metadata.get("url") else None,
+                ))
+        return RagToolResult(
+            status="ok",
+            query=query,
+            symbol=symbol.upper() if symbol else None,
+            count=len(compact_chunks),
+            chunks=compact_chunks,
+        ).model_dump_json()
     except Exception as exc:
-        return json.dumps(
-            {
-                "status": "error",
-                "query": query,
-                "symbol": symbol.upper() if symbol else None,
-                "count": 0,
-                "chunks": [],
-                "error": str(exc),
-            }
-        )
+        return RagToolResult(
+            status="error",
+            query=query,
+            symbol=symbol.upper() if symbol else None,
+            count=0,
+            chunks=[],
+            error=str(exc),
+        ).model_dump_json()
