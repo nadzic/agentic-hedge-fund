@@ -41,6 +41,8 @@ dependencies = [
     "fastembed>=0.8.0",
     "sentence-transformers>=5.3.0",
     "langfuse>=4.0.1",
+    "pyjwt>=2.12.1",
+    "cryptography>=46.0.5",
 ]
 
 [project.optional-dependencies]
