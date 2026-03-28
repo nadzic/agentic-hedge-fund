@@ -97,7 +97,9 @@ app/
   services/
     signal_service.py
 Dockerfile
+Dockerfile.dev
 docker-compose.yml
+docker-compose.prod.yml
 ```
 
 ## Quickstart (Local with `uv`)
@@ -113,6 +115,7 @@ Create `.env` (or copy from `sample.env`) and set at least:
 - `LLM_PROVIDER`
 - `LLM_MODEL_NAME`
 - `QDRANT_URL` (for local non-Docker run, usually `http://localhost:6333`)
+- `ALLOWED_ORIGINS` (for local frontend, usually `http://localhost:3000,http://127.0.0.1:3000`)
 - Optional analyst-source keys:
   - `FINNHUB_API_KEY` (sentiment news source)
   - `ANTHROPIC_API_KEY` (if using Anthropic provider)
@@ -166,6 +169,31 @@ docker compose down -v
 - RAG Ingest + Index: `POST http://localhost:8000/api/v1/rag/ingest-index`
 - Qdrant: `http://localhost:6333`
 - Frontend: `http://localhost:3000`
+
+## Production-Like Docker (Local Smoke Test)
+
+Use the production Dockerfiles and compose profile before deploying to Cloud Run.
+
+### 1) Create production env file
+```bash
+cp .env.prod.example .env.prod
+```
+
+Fill at least:
+- `QDRANT_URL` (external/managed Qdrant endpoint)
+- `OPENAI_API_KEY`
+- `NEXT_PUBLIC_API_URL` (final API URL, e.g. `https://<api-service>/api/v1`)
+- `ALLOWED_ORIGINS` (frontend origin, e.g. `https://<frontend-service>`)
+
+### 2) Build and run
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env.prod up --build
+```
+
+### 3) Stop
+```bash
+docker compose -f docker-compose.prod.yml down
+```
 
 ## API Endpoints
 
@@ -221,7 +249,9 @@ Example response (shape):
 - **Production / Cloud Run (recommended):**
   - deploy API and frontend as separate Cloud Run services,
   - use managed/external Qdrant service (`QDRANT_URL`),
-  - inject secrets via Secret Manager (LLM keys, optional data-provider keys).
+  - inject secrets via Secret Manager (LLM keys, optional data-provider keys),
+  - set `NEXT_PUBLIC_API_URL` at frontend image build time,
+  - set `ALLOWED_ORIGINS` on API runtime to frontend Cloud Run domain.
 
 ## CI
 
