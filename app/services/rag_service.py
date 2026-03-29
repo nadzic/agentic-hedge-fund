@@ -4,13 +4,13 @@ from app.api.schemas.rag import (
   RagQueryRequest,
   RagQueryResponse,
 )
+from app.observability.tracing import observe
 from app.rag.pipelines import (
   IngestIndexRequest,
   QueryPipelineRequest,
   get_ingest_index_pipeline,
   get_query_pipeline,
 )
-from app.observability.tracing import observe
 
 
 @observe(name="api.rag.ingest_index")

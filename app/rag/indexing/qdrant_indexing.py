@@ -47,7 +47,7 @@ class QdrantIndexing:
         self.collection_name: str = collection_name
         self.client: QdrantClient = QdrantClient(url=qdrant_url, api_key=api_key, timeout=30)
         if not os.getenv("OPENAI_API_KEY"):
-            raise EnvironmentError("OPENAI_API_KEY is not set in environment/.env")
+            raise OSError("OPENAI_API_KEY is not set in environment/.env")
         self.embedding_model: OpenAIEmbedding = OpenAIEmbedding(model=embedding_model)
 
     @staticmethod

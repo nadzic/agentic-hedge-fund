@@ -4,6 +4,7 @@ from app.agents.graph.schemas import Signal, SuggestionOutput
 from app.agents.graph.state import HedgeFundState
 from app.observability.tracing import observe
 
+
 @observe(name="agents.graph.nodes.request_clarification.request_clarification_node")
 def request_clarification_node(state: HedgeFundState) -> dict[str, object | None]:
     symbol = state["input"].symbol.strip().upper() or "UNKNOWN"

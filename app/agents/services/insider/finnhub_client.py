@@ -9,7 +9,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-def fetch_insider_transactions(symbol: str, lookback_days: int = 30) -> list[dict]:
+def fetch_insider_transactions(
+    symbol: str, lookback_days: int = 30
+) -> list[dict[str, object]]:
     api_key = os.getenv("FINNHUB_API_KEY")
     if not api_key:
         return []
@@ -37,8 +39,8 @@ def fetch_insider_transactions(symbol: str, lookback_days: int = 30) -> list[dic
     if not isinstance(data, list):
         return []
 
-    cleaned: list[dict] = []
+    cleaned: list[dict[str, object]] = []
     for row in data:
         if isinstance(row, dict):
-            cleaned.append(row)
+            cleaned.append({str(key): value for key, value in row.items()})
     return cleaned

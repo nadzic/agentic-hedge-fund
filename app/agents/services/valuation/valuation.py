@@ -12,6 +12,8 @@ def run_valuation_analysis(
     _ = horizon
     snapshot = fetch_valuation_snapshot(symbol)
     decision = score_valuation(snapshot)
+    enterprise_value = snapshot.enterprise_value if snapshot.enterprise_value is not None else "na"
+    return_on_equity = snapshot.return_on_equity if snapshot.return_on_equity is not None else "na"
 
     metrics: dict[str, float | int | str] = {
         "trailing_pe": snapshot.trailing_pe if snapshot.trailing_pe is not None else "na",
@@ -20,9 +22,9 @@ def run_valuation_analysis(
         "price_to_book": snapshot.price_to_book if snapshot.price_to_book is not None else "na",
         "ev_to_ebitda": snapshot.ev_to_ebitda if snapshot.ev_to_ebitda is not None else "na",
         "market_cap": snapshot.market_cap if snapshot.market_cap is not None else "na",
-        "enterprise_value": snapshot.enterprise_value if snapshot.enterprise_value is not None else "na",
+        "enterprise_value": enterprise_value,
         "profit_margins": snapshot.profit_margins if snapshot.profit_margins is not None else "na",
-        "return_on_equity": snapshot.return_on_equity if snapshot.return_on_equity is not None else "na",
+        "return_on_equity": return_on_equity,
         "valuation_score": decision.score,
         "data_coverage": snapshot.data_coverage,
         "as_of_date": snapshot.as_of_date,

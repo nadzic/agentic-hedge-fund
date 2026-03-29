@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import yfinance as yf
 
@@ -68,5 +68,5 @@ def fetch_fundamental_snapshot(symbol: str) -> FundamentalSnapshot:
         roe=roe,
         pe_ratio=pe_ratio,
         data_coverage=_coverage(values_for_coverage),
-        as_of_date=datetime.now(timezone.utc).date().isoformat(),
+        as_of_date=datetime.now(UTC).date().isoformat(),
     )

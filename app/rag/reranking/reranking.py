@@ -2,8 +2,9 @@ from abc import ABC, abstractmethod
 
 from pydantic import BaseModel, Field
 
-from app.rag.retrieval.retrieval import RetrievedChunk
 from app.observability.tracing import observe
+from app.rag.retrieval.retrieval import RetrievedChunk
+
 
 class RerankingRequest(BaseModel):
   query: str
@@ -48,7 +49,7 @@ class CrossEncoderRerankingService(RerankingService):
 
     # Score by model score descending
     ranked = sorted(
-        zip(scores, chunks),
+        zip(scores, chunks, strict=False),
         key=lambda x: float(x[0]),
         reverse=True,
     )

@@ -1,7 +1,11 @@
 from __future__ import annotations
+
 from pydantic import BaseModel, Field
+
 from app.agents.graph.schemas import Signal
 from app.agents.services.llm import get_llm
+
+
 class ValuationNarrative(BaseModel):
     summary: str = Field(..., description="2-3 sentence valuation summary.")
     bull_case: str = Field(..., description="One valuation-based bullish argument.")

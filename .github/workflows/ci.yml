@@ -60,7 +60,7 @@ jobs:
         run: uv run ruff check .
 
       - name: BasedPyright type check
-        run: uv run basedpyright .
+        run: uv run basedpyright --level error .
 
       - name: Pytest run tests
         run: |

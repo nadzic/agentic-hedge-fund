@@ -14,7 +14,8 @@ def _compute_rsi(close: pd.Series, period: int = 14) -> pd.Series:
     avg_gain = cast(pd.Series, gain.ewm(alpha=1 / period, adjust=False, min_periods=period).mean())
     avg_loss = cast(pd.Series, loss.ewm(alpha=1 / period, adjust=False, min_periods=period).mean())
     rs = avg_gain / avg_loss.replace(0, pd.NA)
-    rsi = cast(pd.Series, 100 - (100 / (1 + rs)))
+    rsi_values = 100 - (100 / (1 + rs))
+    rsi = pd.Series(rsi_values, index=close.index)
     return cast(pd.Series, rsi.fillna(50.0))
 
 

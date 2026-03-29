@@ -1,9 +1,9 @@
 # pyright: reportMissingTypeStubs=false
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 import os
 import sys
+from abc import ABC, abstractmethod
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -14,6 +14,7 @@ from llama_index.vector_stores.qdrant import QdrantVectorStore
 from pydantic import BaseModel, Field
 from qdrant_client import QdrantClient
 from typing_extensions import override
+
 from app.observability.tracing import observe
 
 load_dotenv()
@@ -55,7 +56,7 @@ class QdrantRetrievalService(RetrievalService):
     self.collection_name: str = collection_name
     self.client: QdrantClient = QdrantClient(url=qdrant_url, api_key=api_key, timeout=30)
     if not os.getenv("OPENAI_API_KEY"):
-      raise EnvironmentError("OPENAI_API_KEY is not set in environment/.env")
+      raise OSError("OPENAI_API_KEY is not set in environment/.env")
     self.embedding_model: OpenAIEmbedding = OpenAIEmbedding(model=embedding_model)
 
     # 1) Qdrant vector store

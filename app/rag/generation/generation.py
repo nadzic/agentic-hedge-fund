@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 import sys
+from abc import ABC, abstractmethod
 from pathlib import Path
 
 from langchain_core.language_models.chat_models import BaseChatModel
@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from typing_extensions import override
 
 from app.observability.tracing import observe
+
 try:
   from app.agents.services.llm import get_llm
   from app.rag.core.config import QDRANT_COLLECTION

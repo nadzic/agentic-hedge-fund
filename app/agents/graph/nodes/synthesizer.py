@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from app.agents.graph.schemas import Signal, SuggestionOutput
+from collections import defaultdict
+
+from app.agents.graph.schemas import AnalystOutput, Signal, SuggestionOutput
 from app.agents.graph.state import HedgeFundState
 from app.observability.tracing import observe
-from app.agents.graph.schemas import AnalystOutput
-from collections import defaultdict
+
 
 def _choose_signal(outputs: list[AnalystOutput]) -> tuple[Signal, dict[Signal, float]]:
     """Choose the signal that is most confident."""

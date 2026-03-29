@@ -1,22 +1,21 @@
 from __future__ import annotations
 
 from app.agents.services.llm import get_llm
-from app.rag.reranking.reranking import RerankingService
+from app.observability.tracing import observe
 from app.rag.generation.generation import (
   GenerationRequest,
   GenerationResponse,
   GenerationService,
   LLMGenerationService,
 )
-from app.rag.reranking.reranking import RerankingRequest
+from app.rag.pipelines.types import QueryPipelineRequest, QueryPipelineResult
+from app.rag.reranking.reranking import RerankingRequest, RerankingService
 from app.rag.retrieval.retrieval import (
   QdrantRetrievalService,
-  RetrievedChunk,
   RetrievalRequest,
   RetrievalService,
+  RetrievedChunk,
 )
-from app.rag.pipelines.types import QueryPipelineRequest, QueryPipelineResult
-from app.observability.tracing import observe
 
 
 class RagQueryPipeline:
@@ -39,7 +38,7 @@ class RagQueryPipeline:
     reranking_service: RerankingService | None = None,
     rerank_enabled: bool = True,
     rerank_top_k: int = 10,
-  ) -> "RagQueryPipeline":
+  ) -> RagQueryPipeline:
     retrieval_service = QdrantRetrievalService(collection_name=collection_name)
     generation_service = LLMGenerationService(llm=get_llm())
     return cls(

@@ -106,7 +106,6 @@ app/
 Dockerfile
 Dockerfile.dev
 docker-compose.yml
-docker-compose.prod.yml
 ```
 
 ## Quickstart (Local with `uv`)
@@ -176,31 +175,6 @@ docker compose down -v
 - RAG Ingest + Index: `POST http://localhost:8000/api/v1/rag/ingest-index`
 - Qdrant: `http://localhost:6333`
 - Frontend: `http://localhost:3000`
-
-## Production-Like Docker (Local Smoke Test)
-
-Use the production Dockerfiles and compose profile before deploying to Cloud Run.
-
-### 1) Create production env file
-```bash
-cp .env.prod.example .env.prod
-```
-
-Fill at least:
-- `QDRANT_URL` (external/managed Qdrant endpoint)
-- `OPENAI_API_KEY`
-- `NEXT_PUBLIC_API_URL` (final API URL, e.g. `https://<api-service>/api/v1`)
-- `ALLOWED_ORIGINS` (frontend origin, e.g. `https://<frontend-service>`)
-
-### 2) Build and run
-```bash
-docker compose -f docker-compose.prod.yml --env-file .env.prod up --build
-```
-
-### 3) Stop
-```bash
-docker compose -f docker-compose.prod.yml down
-```
 
 ## API Endpoints
 

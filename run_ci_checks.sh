@@ -81,7 +81,7 @@ run_python_checks() {
   (cd "${ROOT_DIR}" && uv run ruff check .)
 
   log_step "Python: BasedPyright type check"
-  (cd "${ROOT_DIR}" && uv run basedpyright .)
+  (cd "${ROOT_DIR}" && uv run basedpyright --level error .)
 
   if [[ -d "${ROOT_DIR}/tests" ]]; then
     log_step "Python: pytest"

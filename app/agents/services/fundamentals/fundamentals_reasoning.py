@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 from app.agents.graph.schemas import Signal
 from app.agents.services.llm import get_llm
 
+
 class FundamentalNarrative(BaseModel):
     summary: str = Field(..., description="2-3 sentence summary of current fundamental picture.")
     bull_case: str = Field(..., description="One bullish argument from the fundamentals.")

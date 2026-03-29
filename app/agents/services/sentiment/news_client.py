@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
 import os
+from datetime import UTC, datetime, timedelta
 
 import httpx
 import yfinance as yf
@@ -77,7 +77,7 @@ def fetch_sentiment_texts(
     - source label
     - number of external news items
     """
-    now = datetime.now(timezone.utc).date()
+    now = datetime.now(UTC).date()
     from_date = (now - timedelta(days=lookback_days)).isoformat()
     to_date = now.isoformat()
 

@@ -35,11 +35,12 @@ def technicals_analyst_node(state: WorkerState) -> dict[str, list[AnalystOutput]
             reasoning = fallback_reasoning
             metrics["status"] = "fallback"
         else:
+            risks_text = ", ".join(narrative.key_risks[:3]) if narrative.key_risks else "n/a"
             reasoning = (
                 f"{narrative.summary}\n\n"
                 f"Bull case: {narrative.bull_case}\n"
                 f"Bear case: {narrative.bear_case}\n"
-                f"Key risks: {', '.join(narrative.key_risks[:3]) if narrative.key_risks else 'n/a'}\n\n"
+                f"Key risks: {risks_text}\n\n"
                 f"Deterministic decision: signal={decision.signal.value}, "
                 f"confidence={decision.confidence:.2f}."
             )

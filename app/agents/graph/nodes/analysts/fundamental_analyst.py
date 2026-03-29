@@ -1,8 +1,9 @@
-from app.agents.services.fundamentals.fundamentals import run_fundamentals_analysis
-from app.agents.services.fundamentals.fundamentals_reasoning import generate_fundamental_narrative
 from app.agents.graph.schemas import AnalystOutput, Signal
 from app.agents.graph.state import WorkerState
+from app.agents.services.fundamentals.fundamentals import run_fundamentals_analysis
+from app.agents.services.fundamentals.fundamentals_reasoning import generate_fundamental_narrative
 from app.observability.tracing import observe
+
 
 @observe(name="agents.graph.nodes.analysts.fundamentals_analyst_node")
 def fundamentals_analyst_node(state: WorkerState) -> dict[str, list[AnalystOutput]]:
@@ -33,7 +34,8 @@ def fundamentals_analyst_node(state: WorkerState) -> dict[str, list[AnalystOutpu
                 f"Bull case: {narrative.bull_case}\n"
                 f"Bear case: {narrative.bear_case}\n"
                 f"Key risks: {risks_text}\n\n"
-                f"Deterministic decision: signal={decision.signal.value}, confidence={decision.confidence:.2f}."
+                "Deterministic decision: "
+                f"signal={decision.signal.value}, confidence={decision.confidence:.2f}."
             )
             metrics["llm_reasoning_status"] = "ok"
         return {

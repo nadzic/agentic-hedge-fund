@@ -10,12 +10,15 @@ from typing import Protocol, cast
 if __package__ is None or __package__ == "":
     sys.path.append(str(Path(__file__).resolve().parents[2]))
 
+import json
+from typing import Any
+
+from pydantic import BaseModel
+
 from app.agents.graph.schemas import RiskLimits, SignalInput
 from app.agents.graph.state import HedgeFundState
 from app.agents.graph.workflow import build_graph
-from pydantic import BaseModel
-import json
-from typing import Any
+
 
 def _to_jsonable(value: Any) -> Any:
     """Recursively convert Pydantic/models/containers to JSON-serializable objects."""
@@ -77,7 +80,11 @@ def main() -> None:
         suggestion = result.get("suggestion")
         if error == "input_validation_failed":
             print("\nInput is not sufficient for analysis.")
-            print("Clarification: Need additional clarification on the input. Please provide the following information: input inquiry should be at least 15 characters.")
+            print(
+                "Clarification: Need additional clarification on the input. "
+                "Please provide the following information: "
+                "input inquiry should be at least 15 characters."
+            )
             print("Please enter the information again:\n")
             current_input = _prompt_input()
             continue

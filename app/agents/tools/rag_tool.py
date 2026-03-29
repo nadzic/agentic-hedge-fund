@@ -1,16 +1,18 @@
 from __future__ import annotations
-import json
-from typing import Any
+
+from typing import Literal
+
 from langchain.tools import tool
 from pydantic import BaseModel
+
 from app.observability.tracing import observe
-from typing import Literal
 from app.rag.core.config import QDRANT_COLLECTION
 from app.rag.retrieval.retrieval import (
     FilterValue,
     QdrantRetrievalService,
     RetrievalRequest,
 )
+
 _retrieval_service: QdrantRetrievalService | None = None
 
 class RagChunk(BaseModel):
@@ -50,6 +52,7 @@ def rag_tool(
     """
     Retrieve vector DB context and return compact JSON for agent usage.
     """
+    requested_symbol = symbol.upper() if symbol else None
     try:
         filters = dict(extra_filters or {})
         if symbol:
@@ -65,21 +68,27 @@ def rag_tool(
         compact_chunks: list[RagChunk] = []
         for idx, chunk in enumerate(chunks[:8], start=1):
             metadata = chunk.metadata or {}
-            symbol = str(metadata.get("symbol"))
-            if symbol:
-                compact_chunks.append(RagChunk(
-                    rank=idx,
-                    score=chunk.score,
-                    text=chunk.text[:600],
-                    source_id=str(metadata.get("source_id")) if metadata.get("source_id") else None,
-                    source_type=str(metadata.get("source_type")) if metadata.get("source_type") else None,
-                    symbol=symbol,
-                    url=str(metadata.get("url")) if metadata.get("url") else None,
-                ))
+            chunk_symbol = str(metadata.get("symbol"))
+            if chunk_symbol:
+                source_id = str(metadata.get("source_id")) if metadata.get("source_id") else None
+                source_type = (
+                    str(metadata.get("source_type")) if metadata.get("source_type") else None
+                )
+                compact_chunks.append(
+                    RagChunk(
+                        rank=idx,
+                        score=chunk.score,
+                        text=chunk.text[:600],
+                        source_id=source_id,
+                        source_type=source_type,
+                        symbol=chunk_symbol,
+                        url=str(metadata.get("url")) if metadata.get("url") else None,
+                    )
+                )
         return RagToolResult(
             status="ok",
             query=query,
-            symbol=symbol.upper() if symbol else None,
+            symbol=requested_symbol,
             count=len(compact_chunks),
             chunks=compact_chunks,
         ).model_dump_json()
@@ -87,7 +96,7 @@ def rag_tool(
         return RagToolResult(
             status="error",
             query=query,
-            symbol=symbol.upper() if symbol else None,
+            symbol=requested_symbol,
             count=0,
             chunks=[],
             error=str(exc),

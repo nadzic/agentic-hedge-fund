@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import yfinance as yf
 
@@ -60,5 +60,5 @@ def fetch_valuation_snapshot(symbol: str) -> ValuationSnapshot:
         profit_margins=profit_margins,
         return_on_equity=return_on_equity,
         data_coverage=_coverage(coverage_values),
-        as_of_date=datetime.now(timezone.utc).date().isoformat(),
+        as_of_date=datetime.now(UTC).date().isoformat(),
     )

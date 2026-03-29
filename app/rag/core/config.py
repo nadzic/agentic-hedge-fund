@@ -1,6 +1,7 @@
 import os
 
 from dotenv import load_dotenv
+
 """RAG source URL configuration constants."""
 
 _ = load_dotenv()

@@ -29,6 +29,11 @@ def _run_graph_sync(request: SignalRequest) -> HedgeFundState:
     "suggestion": None,
     "warning": None,
     "error": None,
+    "rag_context": None,
+    "rag_citations": [],
+    "is_input_valid": False,
+    "missing_fields": [],
+    "clarification_question": None,
   }
 
   return graph.invoke(state)

@@ -1,9 +1,12 @@
 from __future__ import annotations
+
 from app.agents.graph.schemas import AnalystOutput, Signal
 from app.agents.graph.state import WorkerState
 from app.agents.services.sentiment.sentiment import run_sentiment_analysis
 from app.agents.services.sentiment.sentiment_reasoning import generate_sentiment_narrative
 from app.observability.tracing import observe
+
+
 @observe(name="agents.graph.nodes.analysts.sentiment_analyst_node")
 def sentiment_analyst_node(state: WorkerState) -> dict[str, list[AnalystOutput]]:
     symbol = state["input"].symbol
@@ -38,7 +41,8 @@ def sentiment_analyst_node(state: WorkerState) -> dict[str, list[AnalystOutput]]
                 f"Bull case: {narrative.bull_case}\n"
                 f"Bear case: {narrative.bear_case}\n"
                 f"Key risks: {risks_text}\n\n"
-                f"Deterministic decision: signal={decision.signal.value}, confidence={decision.confidence:.2f}."
+                "Deterministic decision: "
+                f"signal={decision.signal.value}, confidence={decision.confidence:.2f}."
             )
             metrics["llm_reasoning_status"] = "ok"
         return {

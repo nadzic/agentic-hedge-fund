@@ -34,7 +34,9 @@ def input_classifier_node(state: HedgeFundState) -> dict[str, object | None]:
 
   if missing_fields:
     clarification_question = (
-      "Need additional clarification on the input. Please provide the following information: " + ", ".join(missing_fields) + "."
+      "Need additional clarification on the input. "
+      "Please provide the following information: "
+      f"{', '.join(missing_fields)}."
     )
     return {
       "is_input_valid": False,

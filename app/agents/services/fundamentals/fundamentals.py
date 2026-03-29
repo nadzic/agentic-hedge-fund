@@ -11,11 +11,13 @@ def run_fundamentals_analysis(
     _ = horizon
     snapshot = fetch_fundamental_snapshot(symbol)
     decision = score_fundamentals(snapshot)
+    earnings_growth = snapshot.earnings_growth if snapshot.earnings_growth is not None else "na"
+    operating_margin = snapshot.operating_margin if snapshot.operating_margin is not None else "na"
     metrics: dict[str, float | int | str] = {
         "revenue_growth": snapshot.revenue_growth if snapshot.revenue_growth is not None else "na",
-        "earnings_growth": snapshot.earnings_growth if snapshot.earnings_growth is not None else "na",
+        "earnings_growth": earnings_growth,
         "gross_margin": snapshot.gross_margin if snapshot.gross_margin is not None else "na",
-        "operating_margin": snapshot.operating_margin if snapshot.operating_margin is not None else "na",
+        "operating_margin": operating_margin,
         "fcf_margin": snapshot.fcf_margin if snapshot.fcf_margin is not None else "na",
         "debt_to_equity": snapshot.debt_to_equity if snapshot.debt_to_equity is not None else "na",
         "current_ratio": snapshot.current_ratio if snapshot.current_ratio is not None else "na",
