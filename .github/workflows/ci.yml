@@ -80,3 +80,76 @@ jobs:
 
       - name: Build docker image
         run: docker build -t agentic-hedge-fund:ci .
+
+
+  deploy-cloud-run:
+    name: Build, Push, and Deploy to Cloud Run
+    runs-on: ubuntu-latest
+    needs: [quality-check-python, quality-check-frontend]
+    if: github.ref == 'refs/heads/main'
+
+    permissions: read
+    id-token: write
+
+    env:
+      PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      REGION: ${{ vars.GCP_REGION }}
+      REPO: ${{ vars.GAR_REPOSITORY }}
+      API_SERVICE: ${{ vars.CLOUD_RUN_API_SERVICE }}
+      FRONTEND_SERVICE: ${{ vars.CLOUD_RUN_FRONTEND_SERVICE }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        
+      - name: Authenticate to Google Cloud (OIDC)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+      
+      - name: Configure Docker auth for Artifact Registry
+        run: gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+
+      - name: Build and push API image
+        run: |
+          gcloud builds submit --region=$REGION --tag $REPO/$API_SERVICE
+
+      - name: Build and push API image
+        run: |
+          API_IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/api:${GITHUB_SHA}"
+          docker build -t "${API_IMAGE}" .
+          docker push "${API_IMAGE}"
+          echo "API_IMAGE=${API_IMAGE}" >> "$GITHUB_ENV"
+
+      - name: Build and push Frontend image
+        run: |
+          FRONTEND_IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/frontend:${GITHUB_SHA}"
+          docker build \
+            -f app/frontend/Dockerfile \
+            --build-arg NEXT_PUBLIC_API_URL="${{ vars.NEXT_PUBLIC_API_URL }}" \
+            -t "${FRONTEND_IMAGE}" \
+            app/frontend
+          docker push "${FRONTEND_IMAGE}"
+          echo "FRONTEND_IMAGE=${FRONTEND_IMAGE}" >> "$GITHUB_ENV"
+
+      - name: Deploy API to Cloud Run
+        run: |
+          gcloud run deploy "${API_SERVICE}" \
+            --image "${API_IMAGE}" \
+            --region "${REGION}" \
+            --platform managed \
+            --allow-unauthenticated \
+            --set-env-vars "QDRANT_URL=${{ vars.QDRANT_URL }},ALLOWED_ORIGINS=${{ vars.ALLOWED_ORIGINS }}" \
+            --set-secrets "OPENAI_API_KEY=OPENAI_API_KEY:latest,ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest,FINNHUB_API_KEY=FINNHUB_API_KEY:latest"
+
+      - name: Deploy Frontend to Cloud Run
+        run: |
+          gcloud run deploy "${FRONTEND_SERVICE}" \
+            --image "${FRONTEND_IMAGE}" \
+            --region "${REGION}" \
+            --platform managed \
+            --allow-unauthenticated
