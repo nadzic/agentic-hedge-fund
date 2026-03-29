@@ -1,5 +1,12 @@
 # Agentic Hedge Fund
 
+[![CI](https://github.com/nadzic/agentic-hedge-fund/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/nadzic/agentic-hedge-fund/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
+![Next.js](https://img.shields.io/badge/Next.js-000000?logo=next.js&logoColor=white)
+![LangGraph](https://img.shields.io/badge/LangGraph-agent%20orchestration-1C3C3C)
+![Qdrant](https://img.shields.io/badge/Qdrant-vector%20search-DC244C)
+
 An end-to-end, agent-based research stack for equity signal generation using:
 - multi-node analyst orchestration (LangGraph),
 - hybrid RAG retrieval (Qdrant + dense/sparse search),
