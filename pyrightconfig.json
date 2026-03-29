@@ -1,6 +1,7 @@
 {
   "venvPath": ".",
   "venv": ".venv",
+  "failOnWarnings": false,
   "pythonVersion": "3.11",
   "include": ["app", "main.py"],
   "exclude": [".venv", "**/.venv", "**/__pycache__"]
