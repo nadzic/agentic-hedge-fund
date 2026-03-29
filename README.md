@@ -13,8 +13,6 @@ An end-to-end, agent-based research stack for equity signal generation using:
 - LLM reasoning and synthesis,
 - FastAPI + Next.js for API and UI delivery.
 
-This project is designed as a portfolio-grade reference architecture for building production-ready AI research systems.
-
 ## What This Project Does
 
 Given a user query (for example: *"Should I buy NVDA for a swing trade?"*), the system:
