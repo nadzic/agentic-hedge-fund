@@ -3,6 +3,15 @@
 import { useMemo, useState } from "react";
 
 type AuthMode = "login" | "signup";
+type StepStatus = "done" | "running" | "queued";
+type ChatMessage = { role: "assistant" | "user"; content: string };
+type ReasoningStep = {
+  label: string;
+  detail: string;
+  status: StepStatus;
+  tokens: number | null;
+  durationMs: number | null;
+};
 
 const sessions = [
   "Portfolio rebalance strategy",
@@ -13,7 +22,7 @@ const sessions = [
   "Compare two trading workflows",
 ];
 
-const messages = [
+const messages: ChatMessage[] = [
   {
     role: "assistant",
     content:
@@ -27,14 +36,38 @@ const messages = [
   },
 ];
 
-const reasoningSteps = [
-  { label: "Context retrieval", detail: "Loading market snapshot and prior session memory", status: "done" },
-  { label: "Signal fusion", detail: "Combining macro + technical + news sentiment", status: "running" },
-  { label: "Risk constraints", detail: "Applying exposure, volatility, and drawdown limits", status: "queued" },
-  { label: "Allocation draft", detail: "Preparing candidate portfolio and explanations", status: "queued" },
+const reasoningSteps: ReasoningStep[] = [
+  {
+    label: "Context retrieval",
+    detail: "Loading market snapshot and prior session memory",
+    status: "done",
+    tokens: 182,
+    durationMs: 220,
+  },
+  {
+    label: "Signal fusion",
+    detail: "Combining macro + technical + news sentiment",
+    status: "running",
+    tokens: 426,
+    durationMs: 1480,
+  },
+  {
+    label: "Risk constraints",
+    detail: "Applying exposure, volatility, and drawdown limits",
+    status: "queued",
+    tokens: null,
+    durationMs: null,
+  },
+  {
+    label: "Allocation draft",
+    detail: "Preparing candidate portfolio and explanations",
+    status: "queued",
+    tokens: null,
+    durationMs: null,
+  },
 ];
 
-function statusClass(status: string) {
+function statusClass(status: StepStatus) {
   if (status === "done") {
     return "bg-emerald-500";
   }
@@ -47,6 +80,15 @@ function statusClass(status: string) {
 export default function HomePage() {
   const [authMode, setAuthMode] = useState<AuthMode | null>(null);
   const [selectedSession, setSelectedSession] = useState(0);
+
+  const lastQuestion = useMemo(() => {
+    for (let idx = messages.length - 1; idx >= 0; idx -= 1) {
+      if (messages[idx]?.role === "user") {
+        return messages[idx].content;
+      }
+    }
+    return "No question yet.";
+  }, []);
 
   const modalTitle = useMemo(() => {
     if (authMode === "login") {
@@ -107,7 +149,10 @@ export default function HomePage() {
             {messages.map((message, index) => {
               const isUser = message.role === "user";
               return (
-                <div key={`${message.role}-${index}`} className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+                <div
+                  key={`${message.role}-${index}`}
+                  className={`flex ${isUser ? "justify-end" : "justify-start"}`}
+                >
                   <div
                     className={`max-w-2xl rounded-2xl px-4 py-3 text-sm leading-relaxed ${
                       isUser ? "bg-zinc-700 text-zinc-100" : "bg-zinc-900 text-zinc-200"
@@ -132,16 +177,31 @@ export default function HomePage() {
         </section>
 
         <aside className="bg-zinc-950 p-4">
-          <h2 className="mb-1 text-sm font-semibold tracking-wide text-zinc-400">Workflow reasoning</h2>
+          <h2 className="mb-1 text-sm font-semibold tracking-wide text-zinc-400">
+            Workflow reasoning
+          </h2>
           <p className="mb-4 text-xs text-zinc-500">Session: {sessions[selectedSession]}</p>
+          <div className="mb-3 rounded-xl border border-zinc-800 bg-zinc-900/80 p-3">
+            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+              Last question
+            </p>
+            <p className="text-xs text-zinc-300">{lastQuestion}</p>
+          </div>
           <div className="space-y-3">
             {reasoningSteps.map((step) => (
-              <div key={step.label} className="rounded-xl border border-zinc-800 bg-zinc-900/70 p-3">
+              <div
+                key={step.label}
+                className="rounded-xl border border-zinc-800 bg-zinc-900/70 p-3"
+              >
                 <div className="mb-2 flex items-center gap-2">
                   <span className={`h-2.5 w-2.5 rounded-full ${statusClass(step.status)}`} />
                   <p className="text-sm font-medium text-zinc-100">{step.label}</p>
                 </div>
                 <p className="text-xs text-zinc-400">{step.detail}</p>
+                <div className="mt-2 flex items-center gap-4 text-[11px] text-zinc-500">
+                  <span>Tokens: {step.tokens ?? "-"}</span>
+                  <span>Duration: {step.durationMs ? `${step.durationMs} ms` : "-"}</span>
+                </div>
               </div>
             ))}
           </div>
@@ -154,7 +214,9 @@ export default function HomePage() {
             <div className="mb-4 flex items-start justify-between">
               <div>
                 <h3 className="text-xl font-semibold text-zinc-100">{modalTitle}</h3>
-                <p className="mt-1 text-sm text-zinc-400">Auth backend will be connected with FastAPI JWT later.</p>
+                <p className="mt-1 text-sm text-zinc-400">
+                  Auth backend will be connected with FastAPI JWT later.
+                </p>
               </div>
               <button
                 type="button"
