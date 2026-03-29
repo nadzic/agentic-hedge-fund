@@ -39,7 +39,7 @@ jobs:
 
       - name: Tests
         run: npm run test
-        
+
   quality-check-python:
     name: Lint, Type Check, and Tests
     runs-on: ubuntu-latest
@@ -146,8 +146,8 @@ jobs:
             --region "${REGION}" \
             --platform managed \
             --allow-unauthenticated \
-            --set-env-vars "QDRANT_URL=${{ vars.QDRANT_URL }},ALLOWED_ORIGINS=${{ vars.ALLOWED_ORIGINS }}" \
-            --set-secrets "OPENAI_API_KEY=OPENAI_API_KEY:latest,ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest,FINNHUB_API_KEY=FINNHUB_API_KEY:latest"
+            --set-env-vars "ALLOWED_ORIGINS=${{ vars.ALLOWED_ORIGINS }}" \
+            --set-secrets "QDRANT_URL=QDRANT_URL:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest,ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest,FINNHUB_API_KEY=FINNHUB_API_KEY:latest"
 
       - name: Deploy Frontend to Cloud Run
         run: |
