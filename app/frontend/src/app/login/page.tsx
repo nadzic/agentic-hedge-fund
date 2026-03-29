@@ -5,7 +5,6 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
-  const supabase = createClient();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -13,12 +12,18 @@ export default function LoginPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErrorText("");
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      setErrorText(error.message);
-      return;
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        setErrorText(error.message);
+        return;
+      }
+      router.push("/signals");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Login is currently unavailable.";
+      setErrorText(message);
     }
-    router.push("/signals");
   }
   return (
     <form onSubmit={onSubmit} className="max-w-sm space-y-3">
