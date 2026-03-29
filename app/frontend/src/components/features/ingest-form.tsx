@@ -62,10 +62,18 @@ export function IngestForm() {
 
         {result && (
           <div className="space-y-2 rounded-lg border border-zinc-200 p-4 text-sm">
-            <p><span className="font-semibold">Input:</span> {result.input_count}</p>
-            <p><span className="font-semibold">Transformed:</span> {result.transformed_count}</p>
-            <p><span className="font-semibold">Indexed:</span> {result.indexed_count}</p>
-            <p><span className="font-semibold">Collection:</span> {result.collection_name}</p>
+            <p>
+              <span className="font-semibold">Input:</span> {result.input_count}
+            </p>
+            <p>
+              <span className="font-semibold">Transformed:</span> {result.transformed_count}
+            </p>
+            <p>
+              <span className="font-semibold">Indexed:</span> {result.indexed_count}
+            </p>
+            <p>
+              <span className="font-semibold">Collection:</span> {result.collection_name}
+            </p>
             <p className="break-all">
               <span className="font-semibold">Snapshot:</span> {result.snapshot_path}
             </p>

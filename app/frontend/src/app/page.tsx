@@ -33,15 +33,10 @@ export default function HomePage() {
       <Card className="md:col-span-2">
         <CardHeader>
           <CardTitle>Admin Ingest</CardTitle>
-          <CardDescription>
-            Trigger ingestion/indexing job for new sources.
-          </CardDescription>
+          <CardDescription>Trigger ingestion/indexing job for new sources.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Link
-            className="text-sm font-medium text-blue-600 hover:underline"
-            href="/admin/ingest"
-          >
+          <Link className="text-sm font-medium text-blue-600 hover:underline" href="/admin/ingest">
             Open Admin Ingest →
           </Link>
         </CardContent>

@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
@@ -21,7 +23,12 @@ export default function LoginPage() {
   return (
     <form onSubmit={onSubmit} className="max-w-sm space-y-3">
       <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
-      <input value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" type="password" />
+      <input
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        placeholder="Password"
+        type="password"
+      />
       <button type="submit">Login</button>
       {errorText && <p>{errorText}</p>}
     </form>
