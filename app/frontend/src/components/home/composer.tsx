@@ -15,6 +15,7 @@ type ComposerProps = {
   onToggleModelMenu: () => void;
   onSelectModel: (id: ModelOptionId) => void;
   isDictating: boolean;
+  isTranscribing: boolean;
   isDictationSupported: boolean;
   isLoading: boolean;
   onToggleDictation: () => void;
@@ -36,6 +37,7 @@ export function Composer({
   onToggleModelMenu,
   onSelectModel,
   isDictating,
+  isTranscribing,
   isDictationSupported,
   isLoading,
   onToggleDictation,
@@ -98,8 +100,8 @@ export function Composer({
             <button
               type="button"
               onClick={onToggleDictation}
-              disabled={isLoading || !isDictationSupported}
-              title={isDictating ? "Stop dictation" : "Dictation"}
+              disabled={isLoading || isTranscribing || !isDictationSupported}
+              title={isTranscribing ? "Transcribing..." : isDictating ? "Stop dictation" : "Dictation"}
               className={`inline-flex h-9 w-9 items-center justify-center rounded-full border transition disabled:cursor-not-allowed disabled:opacity-50 ${
                 isDictating
                   ? "border-red-500/60 bg-red-500/20 text-red-100"

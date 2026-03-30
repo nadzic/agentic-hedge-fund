@@ -2,16 +2,16 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
-import { ANALYZE_TIMEOUT_MS, API_BASE_URL, ModelOptionId } from "@/components/home/constants";
+import {
+  ANALYZE_TIMEOUT_MS,
+  API_BASE_URL,
+  DICTATION_MAX_DURATION_MS,
+  ModelOptionId,
+} from "@/components/home/constants";
 import { AppHeader } from "@/components/home/app-header";
 import { Composer } from "@/components/home/composer";
 import { MessagesPane } from "@/components/home/messages-pane";
-import {
-  AnalyzeResponse,
-  ChatMessage,
-  DictationConstructor,
-  DictationRecognition,
-} from "@/components/home/types";
+import { AnalyzeResponse, ChatMessage, TranscriptionResponse } from "@/components/home/types";
 import {
   formatAssistantReply,
   getAnalyzeErrorMessage,
@@ -26,11 +26,16 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [isDictating, setIsDictating] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const [isDictationSupported, setIsDictationSupported] = useState(true);
   const [selectedModelId, setSelectedModelId] = useState<ModelOptionId>("chat-gpt-5.4");
   const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const recognitionRef = useRef<DictationRecognition | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioStreamRef = useRef<MediaStream | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
+  const stopTimeoutRef = useRef<number | null>(null);
+  const transcriptionAbortRef = useRef<AbortController | null>(null);
 
   const hasMessages = messages.length > 0;
   const placeholder = useMemo(
@@ -44,73 +49,147 @@ export default function HomePage() {
   const showSuggestions = !hasMessages && isInputFocused && !isLoading && visibleSuggestions.length > 0;
 
   useEffect(() => {
-    const speechWindow = window as Window & {
-      SpeechRecognition?: DictationConstructor;
-      webkitSpeechRecognition?: DictationConstructor;
-    };
-    const Recognition = speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition;
-
-    if (!Recognition) {
+    if (!window.MediaRecorder || !navigator.mediaDevices?.getUserMedia) {
       setIsDictationSupported(false);
+      return undefined;
+    }
+    setIsDictationSupported(true);
+    return () => {
+      if (stopTimeoutRef.current !== null) {
+        window.clearTimeout(stopTimeoutRef.current);
+        stopTimeoutRef.current = null;
+      }
+      const recorder = mediaRecorderRef.current;
+      if (recorder && recorder.state !== "inactive") {
+        recorder.stop();
+      }
+      mediaRecorderRef.current = null;
+      for (const track of audioStreamRef.current?.getTracks() ?? []) {
+        track.stop();
+      }
+      audioStreamRef.current = null;
+      transcriptionAbortRef.current?.abort();
+      transcriptionAbortRef.current = null;
+    };
+  }, []);
+
+  async function transcribeRecording(blob: Blob) {
+    if (!blob.size) {
       return;
     }
 
-    const recognition = new Recognition();
-    recognition.lang = "sl-SI";
-    recognition.continuous = false;
-    recognition.interimResults = false;
+    const controller = new AbortController();
+    transcriptionAbortRef.current = controller;
+    setIsTranscribing(true);
+    try {
+      const extension = blob.type.includes("webm") ? "webm" : "wav";
+      const file = new File([blob], `dictation.${extension}`, { type: blob.type || "audio/webm" });
+      const formData = new FormData();
+      formData.append("audio", file);
 
-    recognition.onresult = (event) => {
-      const transcriptParts: string[] = [];
-      for (let index = event.resultIndex; index < event.results.length; index += 1) {
-        const part = event.results[index]?.transcript?.trim();
-        if (part) {
-          transcriptParts.push(part);
-        }
+      const response = await fetch("/api/transcribe", {
+        method: "POST",
+        body: formData,
+        signal: controller.signal,
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `Transcription failed with status ${response.status}`);
       }
-      if (transcriptParts.length === 0) {
+
+      const data = (await response.json()) as TranscriptionResponse;
+      const transcript = data.text.trim();
+      if (!transcript) {
         return;
       }
-      const transcript = transcriptParts.join(" ").trim();
       setInput((current) => {
         const trimmedCurrent = current.trim();
         return trimmedCurrent.length > 0 ? `${trimmedCurrent} ${transcript}` : transcript;
       });
-    };
+      inputRef.current?.focus();
+    } catch {
+      // Keep UX silent for now; user can continue typing manually.
+    } finally {
+      if (transcriptionAbortRef.current === controller) {
+        transcriptionAbortRef.current = null;
+      }
+      setIsTranscribing(false);
+    }
+  }
 
-    recognition.onerror = () => {
-      setIsDictating(false);
-    };
-
-    recognition.onend = () => {
-      setIsDictating(false);
-    };
-
-    recognitionRef.current = recognition;
-
-    return () => {
-      recognition.stop();
-      recognitionRef.current = null;
-    };
-  }, []);
-
-  function toggleDictation() {
-    if (isLoading || !isDictationSupported) {
-      return;
+  function stopRecording() {
+    if (stopTimeoutRef.current !== null) {
+      window.clearTimeout(stopTimeoutRef.current);
+      stopTimeoutRef.current = null;
     }
 
-    if (isDictating) {
-      recognitionRef.current?.stop();
-      setIsDictating(false);
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== "inactive") {
+      recorder.stop();
+    }
+    mediaRecorderRef.current = null;
+
+    for (const track of audioStreamRef.current?.getTracks() ?? []) {
+      track.stop();
+    }
+    audioStreamRef.current = null;
+    setIsDictating(false);
+  }
+
+  async function startRecording() {
+    if (isLoading || isTranscribing || !isDictationSupported) {
       return;
     }
 
     try {
-      recognitionRef.current?.start();
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (!window.MediaRecorder) {
+        for (const track of stream.getTracks()) {
+          track.stop();
+        }
+        setIsDictationSupported(false);
+        return;
+      }
+
+      const recorder = new MediaRecorder(stream);
+      audioStreamRef.current = stream;
+      mediaRecorderRef.current = recorder;
+      recordedChunksRef.current = [];
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          recordedChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onerror = () => {
+        stopRecording();
+      };
+
+      recorder.onstop = () => {
+        const audioBlob = new Blob(recordedChunksRef.current, {
+          type: recorder.mimeType || "audio/webm",
+        });
+        recordedChunksRef.current = [];
+        void transcribeRecording(audioBlob);
+      };
+
+      recorder.start();
       setIsDictating(true);
+      stopTimeoutRef.current = window.setTimeout(() => {
+        stopRecording();
+      }, DICTATION_MAX_DURATION_MS);
     } catch {
-      setIsDictating(false);
+      return;
     }
+  }
+
+  function toggleDictation() {
+    if (isDictating) {
+      stopRecording();
+      return;
+    }
+    void startRecording();
   }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -119,8 +198,7 @@ export default function HomePage() {
     if (!query || isLoading) return;
 
     if (isDictating) {
-      recognitionRef.current?.stop();
-      setIsDictating(false);
+      stopRecording();
     }
 
     const userMessage: ChatMessage = {
@@ -201,6 +279,7 @@ export default function HomePage() {
         setIsModelMenuOpen(false);
       }}
       isDictating={isDictating}
+      isTranscribing={isTranscribing}
       isDictationSupported={isDictationSupported}
       isLoading={isLoading}
       onToggleDictation={toggleDictation}
