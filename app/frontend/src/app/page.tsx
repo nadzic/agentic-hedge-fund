@@ -3,99 +3,21 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
-type ChatMessage = {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-};
-
-type AnalyzeResponse = {
-  symbol: string;
-  signal: string;
-  confidence: number;
-  reasoning: string;
-  warning: string | null;
-  error: string | null;
-};
-
-type DictationResult = {
-  transcript: string;
-};
-
-type DictationResultList = {
-  length: number;
-  item(index: number): DictationResult | null;
-  [index: number]: DictationResult;
-};
-
-type DictationEvent = {
-  resultIndex: number;
-  results: DictationResultList;
-};
-
-type DictationRecognition = {
-  lang: string;
-  continuous: boolean;
-  interimResults: boolean;
-  onresult: ((event: DictationEvent) => void) | null;
-  onerror: (() => void) | null;
-  onend: (() => void) | null;
-  start: () => void;
-  stop: () => void;
-};
-
-type DictationConstructor = new () => DictationRecognition;
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
-const ANALYZE_TIMEOUT_MS = 45_000;
-const MODEL_OPTIONS = [
-  {
-    id: "opus-4.6",
-    label: "Opus 4.6",
-    detail: "Deeper reasoning",
-  },
-  {
-    id: "chat-gpt-5.4",
-    label: "ChatGPT 5.4",
-    detail: "Faster responses",
-  },
-] as const;
-
-const SUGGESTED_PROMPTS = [
-  "Please analyze NVDA for swing trading",
-  "Please analyze AAPL for swing trading",
-  "Please analyze TSLA for swing trading",
-] as const;
-
-function inferSymbol(query: string): string | null {
-  const candidates = query.match(/\b[A-Z]{1,5}\b/g);
-  return candidates?.at(-1) ?? null;
-}
-
-function inferHorizon(query: string): "intraday" | "swing" | "position" | null {
-  const normalized = query.toLowerCase();
-  if (normalized.includes("intraday")) return "intraday";
-  if (normalized.includes("position")) return "position";
-  if (normalized.includes("swing")) return "swing";
-  return null;
-}
-
-function formatAssistantReply(payload: AnalyzeResponse): string {
-  const lines = [
-    `Symbol: ${payload.symbol}`,
-    `Signal: ${payload.signal.toUpperCase()}`,
-    `Confidence: ${(payload.confidence * 100).toFixed(1)}%`,
-    "",
-    payload.reasoning,
-  ];
-  if (payload.warning) {
-    lines.push("", `Warning: ${payload.warning}`);
-  }
-  if (payload.error) {
-    lines.push("", `Error: ${payload.error}`);
-  }
-  return lines.join("\n");
-}
+import { ANALYZE_TIMEOUT_MS, API_BASE_URL, MODEL_OPTIONS, ModelOptionId } from "@/components/home/constants";
+import { LoadingIndicator } from "@/components/home/loading-indicator";
+import {
+  AnalyzeResponse,
+  ChatMessage,
+  DictationConstructor,
+  DictationRecognition,
+} from "@/components/home/types";
+import {
+  formatAssistantReply,
+  getAnalyzeErrorMessage,
+  getVisibleSuggestions,
+  inferHorizon,
+  inferSymbol,
+} from "@/components/home/utils";
 
 export default function HomePage() {
   const [input, setInput] = useState("");
@@ -104,8 +26,7 @@ export default function HomePage() {
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [isDictating, setIsDictating] = useState(false);
   const [isDictationSupported, setIsDictationSupported] = useState(true);
-  const [selectedModelId, setSelectedModelId] =
-    useState<(typeof MODEL_OPTIONS)[number]["id"]>("chat-gpt-5.4");
+  const [selectedModelId, setSelectedModelId] = useState<ModelOptionId>("chat-gpt-5.4");
   const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const recognitionRef = useRef<DictationRecognition | null>(null);
@@ -123,13 +44,7 @@ export default function HomePage() {
         : "Ask anything about a stock, signal, or strategy...",
     [hasMessages],
   );
-  const visibleSuggestions = useMemo(() => {
-    const query = input.trim().toLowerCase();
-    if (!query) {
-      return SUGGESTED_PROMPTS.slice(0, 5);
-    }
-    return SUGGESTED_PROMPTS.filter((prompt) => prompt.toLowerCase().includes(query)).slice(0, 5);
-  }, [input]);
+  const visibleSuggestions = useMemo(() => getVisibleSuggestions(input), [input]);
   const showSuggestions = !hasMessages && isInputFocused && !isLoading && visibleSuggestions.length > 0;
 
   useEffect(() => {
@@ -258,12 +173,7 @@ export default function HomePage() {
         },
       ]);
     } catch (error) {
-      const text =
-        error instanceof DOMException && error.name === "AbortError"
-          ? `Request timed out after ${Math.round(ANALYZE_TIMEOUT_MS / 1000)}s`
-          : error instanceof Error
-            ? error.message
-            : "Unknown error";
+      const text = getAnalyzeErrorMessage(error, ANALYZE_TIMEOUT_MS);
       setMessages((prev) => [
         ...prev,
         {
@@ -470,26 +380,7 @@ export default function HomePage() {
                   </div>
                 );
               })}
-              {isLoading && (
-                <div className="mb-5 flex justify-start">
-                  <article className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950/90 px-4 py-3">
-                    <div className="mb-2 inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-zinc-500">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      <span>Analyzing with agents</span>
-                    </div>
-                    <div className="space-y-1.5">
-                      <div className="h-2 w-full animate-pulse rounded bg-zinc-800" />
-                      <div className="h-2 w-5/6 animate-pulse rounded bg-zinc-800 [animation-delay:120ms]" />
-                      <div className="h-2 w-2/3 animate-pulse rounded bg-zinc-800 [animation-delay:240ms]" />
-                    </div>
-                    <div className="mt-3 flex items-center gap-1.5">
-                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-zinc-500 [animation-delay:0ms]" />
-                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-zinc-500 [animation-delay:120ms]" />
-                      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-zinc-500 [animation-delay:240ms]" />
-                    </div>
-                  </article>
-                </div>
-              )}
+              {isLoading && <LoadingIndicator />}
             </div>
             <div className="pt-4">{composer}</div>
           </>
