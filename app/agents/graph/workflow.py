@@ -4,12 +4,12 @@ from langgraph.graph import END, START, StateGraph
 from app.agents.graph.nodes import (
     assign_workers,
     input_classifier_node,
+    market_research_agent,
     orchestrator_node,
     request_clarification_node,
     risk_manager_node,
     route_after_classification,
     synthesizer_node,
-    market_research_agent,
 )
 from app.agents.graph.nodes.analysts import (
     fundamentals_analyst_node,

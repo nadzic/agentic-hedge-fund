@@ -1,61 +1,67 @@
+from __future__ import annotations
+
 from app.agents.services.insider.finnhub_client import fetch_insider_transactions
 from app.agents.services.insider.scoring import score_insider
-from app.agents.services.insider.types import InsiderSnapshot, InsiderDecision
+from app.agents.services.insider.types import InsiderDecision, InsiderSnapshot
+
 
 def _to_float(value: object) -> float:
-  if value is None:
+    if value is None:
+        return 0.0
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        cleaned = value.strip().replace(",", "")
+        if cleaned == "":
+            return 0.0
+        try:
+            return float(cleaned)
+        except ValueError:
+            return 0.0
     return 0.0
-  if isinstance(value, (int, float)):
-    return float(value)
-  if isinstance(value, str):
-    cleaned = value.strip().replace(",", "")
-    if cleaned == "":
-      return 0.0
-    try:
-      return float(cleaned)
-    except ValueError:
-      return 0.0
-  return 0.0
 
-def run_insider_analysis(symbol: str, lookback_days: int = 30) -> tuple[InsiderDecision, dict[str, float | int | str]]:
-  rows = fetch_insider_transactions(symbol=symbol, lookback_days=lookback_days)
 
-  buy_count = sell_count = 0
-  buy_shares = sell_shares = 0.0
-  buy_value = sell_value = 0.0
+def run_insider_analysis(
+    symbol: str, lookback_days: int = 30
+) -> tuple[InsiderDecision, dict[str, float | int | str]]:
+    rows = fetch_insider_transactions(symbol=symbol, lookback_days=lookback_days)
 
-  for row in rows:
-    code = str(row.get("transactionCode", "")).upper()
-    shares = _to_float(row.get("share") or row.get("shares"))
-    price = _to_float(row.get("price"))
-    value = abs(shares) * price if price > 0 else abs(shares)
+    buy_count = sell_count = 0
+    buy_shares = sell_shares = 0.0
+    buy_value = sell_value = 0.0
 
-    if code == "P":
-      buy_count += 1
-      buy_shares += abs(shares)
-      buy_value += value
-    elif code == "S":
-      sell_count += 1
-      sell_shares += abs(shares)
-      sell_value += value
+    for row in rows:
+        code = str(row.get("transactionCode", "")).upper()
+        shares = _to_float(row.get("share") or row.get("shares"))
+        price = _to_float(row.get("price"))
+        value = abs(shares) * price if price > 0 else abs(shares)
 
-  snapshot = InsiderSnapshot(
-    buy_count=buy_count,
-    sell_count=sell_count,
-    buy_shares=buy_shares,
-    sell_shares=sell_shares,
-    buy_value_used=buy_value,
-    sell_value_used=sell_value,
-    net_shares=buy_shares - sell_shares,
-    net_value_used=buy_value - sell_value,
-    buy_value_usd=buy_value,
-    sell_value_usd=sell_value,
-    net_value_usd=buy_value - sell_value,
-  )
+        if code == "P":
+            buy_count += 1
+            buy_shares += abs(shares)
+            buy_value += value
+        elif code == "S":
+            sell_count += 1
+            sell_shares += abs(shares)
+            sell_value += value
 
-  decision = score_insider(snapshot)
+    snapshot = InsiderSnapshot(
+        buy_count=buy_count,
+        sell_count=sell_count,
+        buy_shares=buy_shares,
+        sell_shares=sell_shares,
+        buy_value_used=buy_value,
+        sell_value_used=sell_value,
+        net_shares=buy_shares - sell_shares,
+        net_value_used=buy_value - sell_value,
+        buy_value_usd=buy_value,
+        sell_value_usd=sell_value,
+        net_value_usd=buy_value - sell_value,
+    )
 
-  metrics: dict[str, float | int | str] = {
+    decision = score_insider(snapshot)
+
+    metrics: dict[str, float | int | str] = {
         "buy_count": snapshot.buy_count,
         "sell_count": snapshot.sell_count,
         "buy_shares": snapshot.buy_shares,
@@ -68,5 +74,5 @@ def run_insider_analysis(symbol: str, lookback_days: int = 30) -> tuple[InsiderD
         "window_days": lookback_days,
         "records": len(rows),
         "data_source": "finnhub",
-  }
-  return decision, metrics
+    }
+    return decision, metrics
