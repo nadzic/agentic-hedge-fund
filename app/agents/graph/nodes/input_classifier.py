@@ -36,7 +36,7 @@ def input_classifier_node(state: HedgeFundState) -> dict[str, object | None]:
     clarification_question = (
       "Need additional clarification on the input. "
       "Please provide the following information: "
-      f"{', '.join(missing_fields)}. "
+      f"{', '.join(missing_fields)}.\n\n"
       "Example: Please analyze NVDA for swing trading."
     )
     return {
