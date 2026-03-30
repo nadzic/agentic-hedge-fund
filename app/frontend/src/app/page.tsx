@@ -47,6 +47,7 @@ type DictationRecognition = {
 type DictationConstructor = new () => DictationRecognition;
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+const ANALYZE_TIMEOUT_MS = 45_000;
 const MODEL_OPTIONS = [
   {
     id: "opus-4.6",
@@ -212,10 +213,16 @@ export default function HomePage() {
     setInput("");
     setIsLoading(true);
 
+    const abortController = new AbortController();
+    const timeoutId = window.setTimeout(() => {
+      abortController.abort();
+    }, ANALYZE_TIMEOUT_MS);
+
     try {
       const symbol = inferSymbol(query);
       const response = await fetch(`${API_BASE_URL}/signals/analyze`, {
         method: "POST",
+        signal: abortController.signal,
         headers: {
           "Content-Type": "application/json",
           "X-Model-Preference": selectedModelId,
@@ -242,7 +249,12 @@ export default function HomePage() {
         },
       ]);
     } catch (error) {
-      const text = error instanceof Error ? error.message : "Unknown error";
+      const text =
+        error instanceof DOMException && error.name === "AbortError"
+          ? `Request timed out after ${Math.round(ANALYZE_TIMEOUT_MS / 1000)}s`
+          : error instanceof Error
+            ? error.message
+            : "Unknown error";
       setMessages((prev) => [
         ...prev,
         {
@@ -252,6 +264,7 @@ export default function HomePage() {
         },
       ]);
     } finally {
+      window.clearTimeout(timeoutId);
       setIsLoading(false);
     }
   }
