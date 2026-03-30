@@ -9,17 +9,15 @@ type AuthPanelProps = {
 const panelContent = {
   "sign-in": {
     title: "Log into your account",
-    primary: "Login with X",
+    primary: "Login with Google",
     secondary: "Login with email",
-    socialA: "Login with Google",
-    socialB: "Login with Apple",
     footerText: "Don't have an account?",
     footerAction: "Sign up",
     footerHref: "/sign-up",
   },
   "sign-up": {
     title: "Create your account",
-    primary: "Sign up with X",
+    primary: "Sign up with Google",
     secondary: "Sign up with email",
     socialA: "Sign up with Apple",
     socialB: "Sign up with Google",
@@ -63,18 +61,6 @@ export function AuthPanel({ variant }: AuthPanelProps) {
           className="w-full rounded-full border border-zinc-700 bg-transparent px-4 py-2.5 text-sm font-medium text-zinc-200 transition hover:border-zinc-500 hover:text-white"
         >
           {content.secondary}
-        </button>
-        <button
-          type="button"
-          className="w-full rounded-full border border-zinc-800 bg-transparent px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:border-zinc-600 hover:text-white"
-        >
-          {content.socialA}
-        </button>
-        <button
-          type="button"
-          className="w-full rounded-full border border-zinc-800 bg-transparent px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:border-zinc-600 hover:text-white"
-        >
-          {content.socialB}
         </button>
 
         <p className="pt-2 text-center text-sm text-zinc-500">
