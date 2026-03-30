@@ -4,6 +4,6 @@ export const DICTATION_MAX_DURATION_MS = 15_000;
 
 export const SUGGESTED_PROMPTS = [
   "Please analyze NVDA for swing trading",
-  "Please analyze AAPL for swing trading",
-  "Please analyze TSLA for swing trading",
+  "Please analyze AAPL for intraday trading",
+  "Please analyze TSLA for position trading",
 ] as const;

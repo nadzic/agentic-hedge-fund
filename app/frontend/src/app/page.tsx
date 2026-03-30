@@ -324,9 +324,9 @@ export default function HomePage() {
 
       <AppHeader />
 
-      <main className="relative z-10 mx-auto flex min-h-[calc(100vh-88px)] w-full max-w-5xl flex-col px-6 pb-8">
+      <main className="relative z-10 mx-auto flex h-[calc(100vh-88px)] w-full max-w-5xl flex-col px-6 pb-4">
         {!hasMessages ? (
-          <div className="flex min-h-[calc(100vh-160px)] flex-col items-center justify-center">
+          <section className="flex min-h-0 flex-1 flex-col items-center justify-center">
             <div className="mb-10 text-center">
               <p className="mb-3 text-xs uppercase tracking-[0.35em] text-zinc-500">
                 Market Intelligence Workspace
@@ -335,14 +335,19 @@ export default function HomePage() {
                 Veritake
               </h1>
             </div>
-          <p className="mb-3 text-xs text-zinc-500">Model: {backendModelName}</p>
-            <div className="w-full max-w-2xl">{composer}</div>
-          </div>
+            <p className="pb-2 text-center text-xs text-zinc-500">Model: {backendModelName}</p>
+            <div className="w-full max-w-3xl">{composer}</div>
+          </section>
         ) : (
           <>
-            <MessagesPane messages={messages} isLoading={isLoading} />
-          <p className="pt-2 text-center text-xs text-zinc-500">Model: {backendModelName}</p>
-            <div className="pt-4">{composer}</div>
+            <section className="hide-scrollbar mx-auto min-h-0 w-full max-w-3xl flex-1 overflow-y-auto pb-4">
+              <MessagesPane messages={messages} isLoading={isLoading} />
+            </section>
+
+            <section className="sticky bottom-0 mt-2 bg-linear-to-t from-black via-black/95 to-transparent pt-3">
+              <p className="pb-2 text-center text-xs text-zinc-500">Model: {backendModelName}</p>
+              <div className="mx-auto w-full max-w-3xl">{composer}</div>
+            </section>
           </>
         )}
       </main>

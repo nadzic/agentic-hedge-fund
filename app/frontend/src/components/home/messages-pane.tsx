@@ -8,7 +8,7 @@ type MessagesPaneProps = {
 
 export function MessagesPane({ messages, isLoading }: MessagesPaneProps) {
   return (
-    <div className="flex-1 overflow-y-auto px-1">
+    <div className="px-1">
       {messages.map((message) => {
         const isUser = message.role === "user";
         return (
