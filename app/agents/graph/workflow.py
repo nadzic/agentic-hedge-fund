@@ -9,6 +9,7 @@ from app.agents.graph.nodes import (
     request_clarification_node,
     risk_manager_node,
     route_after_classification,
+    symbol_resolver_node,
     synthesizer_node,
 )
 from app.agents.graph.nodes.analysts import (
@@ -23,6 +24,7 @@ from app.agents.graph.state import HedgeFundState
 def build_graph():
     graph = StateGraph(HedgeFundState)
 
+    _ = graph.add_node("symbol_resolver", symbol_resolver_node)
     _ = graph.add_node("input_classifier", input_classifier_node)
     _ = graph.add_node("request_clarification", request_clarification_node)
     _ = graph.add_node("market_research_agent", market_research_agent)
@@ -35,7 +37,8 @@ def build_graph():
     _ = graph.add_node("risk_manager", risk_manager_node)
 
 
-    _ = graph.add_edge(START, "input_classifier")
+    _ = graph.add_edge(START, "symbol_resolver")
+    _ = graph.add_edge("symbol_resolver", "input_classifier")
     _ = graph.add_conditional_edges(
         "input_classifier",
         route_after_classification,
