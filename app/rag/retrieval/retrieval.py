@@ -47,14 +47,19 @@ class QdrantRetrievalService(RetrievalService):
   def __init__(
     self, 
     collection_name: str,
-    qdrant_url: str = "http://localhost:6333",
-    api_key: str = "",
+    qdrant_url: str | None = None,
+    api_key: str | None = None,
     embedding_model: str = "text-embedding-3-small",
     sparse_model: str = "Qdrant/bm25"
   ):
 
+    resolved_qdrant_url = qdrant_url or os.getenv("QDRANT_URL", "http://localhost:6333")
+    resolved_api_key = api_key if api_key is not None else os.getenv("QDRANT_API_KEY", "")
+
     self.collection_name: str = collection_name
-    self.client: QdrantClient = QdrantClient(url=qdrant_url, api_key=api_key, timeout=30)
+    self.client: QdrantClient = QdrantClient(
+      url=resolved_qdrant_url, api_key=resolved_api_key, timeout=30
+    )
     if not os.getenv("OPENAI_API_KEY"):
       raise OSError("OPENAI_API_KEY is not set in environment/.env")
     self.embedding_model: OpenAIEmbedding = OpenAIEmbedding(model=embedding_model)
