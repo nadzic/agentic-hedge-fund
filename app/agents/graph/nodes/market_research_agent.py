@@ -4,10 +4,7 @@ import json
 from collections.abc import Mapping
 from typing import Any
 
-from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
-
 from app.agents.graph.state import HedgeFundState
-from app.agents.services.llm import get_llm
 from app.agents.tools import insider_tool, rag_tool
 from app.observability.tracing import observe
 
@@ -50,62 +47,39 @@ def _extract_rag_context(payload: dict[str, Any] | None) -> tuple[str | None, li
 @observe(name="agents.graph.nodes.market_research_agent.market_research_agent")
 def market_research_agent(state: HedgeFundState) -> Mapping[str, object | None]:
     symbol = state["input"].symbol.upper().strip()
-    horizon = state["input"].horizon
     query = state["input"].query
 
     try:
-        llm = get_llm().bind_tools([rag_tool, insider_tool])
-        messages: list[Any] = [
-            SystemMessage(
-                content=(
-                    "You are a market research tool-routing agent. "
-                    "Decide if you should call rag_tool and/or insider_tool. "
-                    "Use rag_tool for evidence and filing/news context. "
-                    "Use insider_tool for insider buy/sell flow context. "
-                    "You may call none, one, or both."
-                )
-            ),
-            HumanMessage(content=f"Symbol: {symbol}\nHorizon: {horizon}\nQuery: {query}"),
-        ]
+        warnings: list[str] = []
 
         rag_raw: str | None = None
-        insider_raw: str | None = None
-
-        for _ in range(4):
-            ai_message = llm.invoke(messages)
-            messages.append(ai_message)
-
-            tool_calls = getattr(ai_message, "tool_calls", None) or []
-            if not tool_calls:
-                break
-
-            for call in tool_calls:
-                tool_name = str(call.get("name", ""))
-                tool_args = call.get("args")
-                args = tool_args if isinstance(tool_args, dict) else {}
-                args.setdefault("symbol", symbol)
-
-                if tool_name == "rag_tool":
-                    observation = str(rag_tool.invoke(args))
-                    rag_raw = observation
-                elif tool_name == "insider_tool":
-                    observation = str(insider_tool.invoke(args))
-                    insider_raw = observation
-                else:
-                    observation = json.dumps(
-                        {"status": "error", "error": f"unknown tool {tool_name}"}
-                    )
-
-                messages.append(
-                    ToolMessage(
-                        content=observation,
-                        tool_call_id=str(call.get("id", "tool_call")),
-                    )
+        try:
+            rag_raw = str(
+                rag_tool.invoke(
+                    {
+                        "query": query,
+                        "symbol": symbol,
+                        "top_k": 6,
+                        "sparse_top_k": 12,
+                        "alpha": 0.5,
+                    }
                 )
+            )
+        except Exception as exc:
+            warnings.append(f"rag_tool failed: {exc}")
+
+        insider_raw: str | None = None
+        try:
+            insider_raw = str(insider_tool.invoke({"symbol": symbol, "lookback_days": 30}))
+        except Exception as exc:
+            warnings.append(f"insider_tool failed: {exc}")
 
         rag_payload = _safe_json(rag_raw)
         insider_payload = _safe_json(insider_raw)
         rag_context, rag_citations = _extract_rag_context(rag_payload)
+
+        if rag_payload and rag_payload.get("status") == "error":
+            warnings.append(f"rag_tool error: {rag_payload.get('error')}")
 
         if insider_payload and insider_payload.get("status") == "ok":
             insider_line = (
@@ -115,11 +89,13 @@ def market_research_agent(state: HedgeFundState) -> Mapping[str, object | None]:
                 f"reasoning={insider_payload.get('reasoning')}"
             )
             rag_context = f"{rag_context}\n\n{insider_line}" if rag_context else insider_line
+        elif insider_payload and insider_payload.get("status") == "error":
+            warnings.append(f"insider_tool error: {insider_payload.get('error')}")
 
         return {
             "rag_context": rag_context,
             "rag_citations": rag_citations,
-            "warning": None,
+            "warning": " | ".join(warnings) if warnings else None,
             "error": None,
         }
     except Exception as exc:
