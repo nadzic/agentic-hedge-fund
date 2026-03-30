@@ -17,8 +17,8 @@ def _run_graph_sync(request: SignalRequest) -> HedgeFundState:
   state: HedgeFundState = {
     "input": SignalInput(
       query=request.query,
-      symbol=request.symbol,
-      horizon=request.horizon,
+      symbol=(request.symbol or "").strip(),
+      horizon=(request.horizon or "").strip(),
     ),
     "risk_limits": RiskLimits(
       min_confidence=0.60,

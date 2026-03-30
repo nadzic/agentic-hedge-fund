@@ -6,8 +6,8 @@ from pydantic import BaseModel, Field
 
 class SignalRequest(BaseModel):
   query: str = Field(..., min_length=15, description="User request")
-  symbol: str = Field(..., description="Ticket symbol, e.g. APPL")
-  horizon: Literal["intraday", "swing", "position"] = "swing"
+  symbol: str | None = Field(None, description="Ticker symbol, e.g. AAPL")
+  horizon: Literal["intraday", "swing", "position"] | None = None
 
 class SignalResponse(BaseModel):
   symbol: str

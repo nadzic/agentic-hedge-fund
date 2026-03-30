@@ -67,9 +67,17 @@ const SUGGESTED_PROMPTS = [
   "Please analyze TSLA for swing trading",
 ] as const;
 
-function inferSymbol(query: string): string {
+function inferSymbol(query: string): string | null {
   const candidates = query.match(/\b[A-Z]{1,5}\b/g);
-  return candidates?.at(-1) ?? "AAPL";
+  return candidates?.at(-1) ?? null;
+}
+
+function inferHorizon(query: string): "intraday" | "swing" | "position" | null {
+  const normalized = query.toLowerCase();
+  if (normalized.includes("intraday")) return "intraday";
+  if (normalized.includes("position")) return "position";
+  if (normalized.includes("swing")) return "swing";
+  return null;
 }
 
 function formatAssistantReply(payload: AnalyzeResponse): string {
@@ -220,6 +228,7 @@ export default function HomePage() {
 
     try {
       const symbol = inferSymbol(query);
+      const horizon = inferHorizon(query);
       const response = await fetch(`${API_BASE_URL}/signals/analyze`, {
         method: "POST",
         signal: abortController.signal,
@@ -230,7 +239,7 @@ export default function HomePage() {
         body: JSON.stringify({
           query,
           symbol,
-          horizon: "swing",
+          horizon,
         }),
       });
 
