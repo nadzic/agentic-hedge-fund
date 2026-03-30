@@ -9,6 +9,7 @@ from app.agents.graph.nodes import (
     risk_manager_node,
     route_after_classification,
     synthesizer_node,
+    market_research_agent,
 )
 from app.agents.graph.nodes.analysts import (
     fundamentals_analyst_node,
@@ -24,6 +25,7 @@ def build_graph():
 
     _ = graph.add_node("input_classifier", input_classifier_node)
     _ = graph.add_node("request_clarification", request_clarification_node)
+    _ = graph.add_node("market_research_agent", market_research_agent)
     _ = graph.add_node("orchestrator", orchestrator_node)
     _ = graph.add_node("fundamentals_analyst_node", fundamentals_analyst_node)
     _ = graph.add_node("technicals_analyst_node", technicals_analyst_node)
@@ -39,9 +41,10 @@ def build_graph():
         route_after_classification,
         [
             "request_clarification",
-            "orchestrator",
+            "market_research_agent",
         ],
     )
+    _ = graph.add_edge("market_research_agent", "orchestrator")
     _ = graph.add_conditional_edges(
         "orchestrator",
         assign_workers,
