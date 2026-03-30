@@ -95,9 +95,8 @@ export default function HomePage() {
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [isDictating, setIsDictating] = useState(false);
   const [isDictationSupported, setIsDictationSupported] = useState(true);
-  const [selectedModelId, setSelectedModelId] = useState<(typeof MODEL_OPTIONS)[number]["id"]>(
-    "chat-gpt-5.4"
-  );
+  const [selectedModelId, setSelectedModelId] =
+    useState<(typeof MODEL_OPTIONS)[number]["id"]>("chat-gpt-5.4");
   const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const recognitionRef = useRef<DictationRecognition | null>(null);
@@ -105,7 +104,7 @@ export default function HomePage() {
   const hasMessages = messages.length > 0;
   const selectedModel = useMemo(
     () => MODEL_OPTIONS.find((option) => option.id === selectedModelId) ?? MODEL_OPTIONS[0],
-    [selectedModelId]
+    [selectedModelId],
   );
 
   const placeholder = useMemo(
@@ -113,7 +112,7 @@ export default function HomePage() {
       hasMessages
         ? "Ask follow-up about the current setup..."
         : "Ask anything about a stock, signal, or strategy...",
-    [hasMessages]
+    [hasMessages],
   );
   const visibleSuggestions = useMemo(() => {
     const query = input.trim().toLowerCase();
@@ -296,7 +295,9 @@ export default function HomePage() {
                           setIsModelMenuOpen(false);
                         }}
                         className={`mb-1 w-full rounded-xl px-3 py-2 text-left transition last:mb-0 ${
-                          isSelected ? "bg-zinc-800 text-white" : "text-zinc-300 hover:bg-zinc-800/70"
+                          isSelected
+                            ? "bg-zinc-800 text-white"
+                            : "text-zinc-300 hover:bg-zinc-800/70"
                         }`}
                       >
                         <div className="flex items-center justify-between">
@@ -421,7 +422,9 @@ export default function HomePage() {
               <p className="mb-3 text-xs uppercase tracking-[0.35em] text-zinc-500">
                 Market Intelligence Workspace
               </p>
-              <h1 className="text-5xl font-semibold tracking-tight text-white md:text-6xl">Veritake</h1>
+              <h1 className="text-5xl font-semibold tracking-tight text-white md:text-6xl">
+                Veritake
+              </h1>
             </div>
             <div className="w-full max-w-2xl">{composer}</div>
           </div>
