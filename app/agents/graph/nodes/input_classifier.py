@@ -60,7 +60,7 @@ def input_classifier_node(state: HedgeFundState) -> dict[str, object | None]:
 
 def route_after_classification(state: HedgeFundState) -> str:
   if state["is_input_valid"]:
-    return "orchestrator"
+    return "market_research_agent"
   else:
     return "request_clarification"
 
