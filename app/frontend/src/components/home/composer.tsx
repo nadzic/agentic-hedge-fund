@@ -45,7 +45,8 @@ export function Composer({
   visibleSuggestions,
   onSuggestionSelect,
 }: ComposerProps) {
-  const selectedModel = MODEL_OPTIONS.find((option) => option.id === selectedModelId) ?? MODEL_OPTIONS[0];
+  const selectedModel =
+    MODEL_OPTIONS.find((option) => option.id === selectedModelId) ?? MODEL_OPTIONS[0];
 
   return (
     <form onSubmit={onSubmit} className="relative w-full">
@@ -83,7 +84,9 @@ export function Composer({
                         type="button"
                         onClick={() => onSelectModel(option.id)}
                         className={`mb-1 w-full rounded-xl px-3 py-2 text-left transition last:mb-0 ${
-                          isSelected ? "bg-zinc-800 text-white" : "text-zinc-300 hover:bg-zinc-800/70"
+                          isSelected
+                            ? "bg-zinc-800 text-white"
+                            : "text-zinc-300 hover:bg-zinc-800/70"
                         }`}
                       >
                         <div className="flex items-center justify-between">
@@ -101,7 +104,9 @@ export function Composer({
               type="button"
               onClick={onToggleDictation}
               disabled={isLoading || isTranscribing || !isDictationSupported}
-              title={isTranscribing ? "Transcribing..." : isDictating ? "Stop dictation" : "Dictation"}
+              title={
+                isTranscribing ? "Transcribing..." : isDictating ? "Stop dictation" : "Dictation"
+              }
               className={`inline-flex h-9 w-9 items-center justify-center rounded-full border transition disabled:cursor-not-allowed disabled:opacity-50 ${
                 isDictating
                   ? "border-red-500/60 bg-red-500/20 text-red-100"
@@ -129,7 +134,12 @@ export function Composer({
               className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-zinc-100 text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
               title="Send"
             >
-              <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2">
+              <svg
+                aria-hidden
+                viewBox="0 0 24 24"
+                className="h-4 w-4 fill-none stroke-current"
+                strokeWidth="2"
+              >
                 <path d="M12 17V7" />
                 <path d="m7 12 5-5 5 5" />
               </svg>

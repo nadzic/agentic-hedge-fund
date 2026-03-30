@@ -2,17 +2,26 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { createClient } from "@/lib/supabase/client";
 
 export function AppHeader() {
   const router = useRouter();
-  const supabase = useMemo(() => createClient(), []);
   const [userEmail, setUserEmail] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
+    let unsubscribe: (() => void) | null = null;
+    let supabase;
+    try {
+      supabase = createClient();
+    } catch {
+      return () => {
+        active = false;
+      };
+    }
+
     supabase.auth.getUser().then(({ data, error }) => {
       if (!active || error) return;
       setUserEmail(data.user?.email ?? null);
@@ -23,14 +32,21 @@ export function AppHeader() {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUserEmail(session?.user?.email ?? null);
     });
+    unsubscribe = () => subscription.unsubscribe();
 
     return () => {
       active = false;
-      subscription.unsubscribe();
+      unsubscribe?.();
     };
-  }, [supabase]);
+  }, []);
 
   async function handleSignOut() {
+    let supabase;
+    try {
+      supabase = createClient();
+    } catch {
+      return;
+    }
     await supabase.auth.signOut();
     router.refresh();
   }

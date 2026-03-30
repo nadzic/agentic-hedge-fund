@@ -46,7 +46,8 @@ export default function HomePage() {
     [hasMessages],
   );
   const visibleSuggestions = useMemo(() => getVisibleSuggestions(input), [input]);
-  const showSuggestions = !hasMessages && isInputFocused && !isLoading && visibleSuggestions.length > 0;
+  const showSuggestions =
+    !hasMessages && isInputFocused && !isLoading && visibleSuggestions.length > 0;
 
   useEffect(() => {
     if (!window.MediaRecorder || !navigator.mediaDevices?.getUserMedia) {
