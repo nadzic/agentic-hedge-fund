@@ -122,7 +122,7 @@ export default function HomePage() {
     }
     return SUGGESTED_PROMPTS.filter((prompt) => prompt.toLowerCase().includes(query)).slice(0, 5);
   }, [input]);
-  const showSuggestions = isInputFocused && !isLoading && visibleSuggestions.length > 0;
+  const showSuggestions = !hasMessages && isInputFocused && !isLoading && visibleSuggestions.length > 0;
 
   useEffect(() => {
     const speechWindow = window as Window & {
