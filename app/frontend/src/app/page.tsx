@@ -1,260 +1,405 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import Link from "next/link";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
-type AuthMode = "login" | "signup";
-type StepStatus = "done" | "running" | "queued";
-type ChatMessage = { role: "assistant" | "user"; content: string };
-type ReasoningStep = {
-  label: string;
-  detail: string;
-  status: StepStatus;
-  tokens: number | null;
-  durationMs: number | null;
+type ChatMessage = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
 };
 
-const sessions = [
-  "Portfolio rebalance strategy",
-  "Daily macro signal review",
-  "Evaluate EUR/USD momentum",
-  "Risk model discussion",
-  "Backtest agent pipeline",
-  "Compare two trading workflows",
-];
+type AnalyzeResponse = {
+  symbol: string;
+  signal: string;
+  confidence: number;
+  reasoning: string;
+  warning: string | null;
+  error: string | null;
+};
 
-const messages: ChatMessage[] = [
-  {
-    role: "assistant",
-    content:
-      "Ready when you are. Ask about a strategy, asset, portfolio setup, or run a structured workflow.",
-  },
-  { role: "user", content: "Show me today's macro-aware setup for a conservative portfolio." },
-  {
-    role: "assistant",
-    content:
-      "I can do that. I will pull the latest signal context, evaluate risk budget, and propose allocations with reasoning.",
-  },
-];
+type DictationResult = {
+  transcript: string;
+};
 
-const reasoningSteps: ReasoningStep[] = [
-  {
-    label: "Context retrieval",
-    detail: "Loading market snapshot and prior session memory",
-    status: "done",
-    tokens: 182,
-    durationMs: 220,
-  },
-  {
-    label: "Signal fusion",
-    detail: "Combining macro + technical + news sentiment",
-    status: "running",
-    tokens: 426,
-    durationMs: 1480,
-  },
-  {
-    label: "Risk constraints",
-    detail: "Applying exposure, volatility, and drawdown limits",
-    status: "queued",
-    tokens: null,
-    durationMs: null,
-  },
-  {
-    label: "Allocation draft",
-    detail: "Preparing candidate portfolio and explanations",
-    status: "queued",
-    tokens: null,
-    durationMs: null,
-  },
-];
+type DictationResultList = {
+  length: number;
+  item(index: number): DictationResult | null;
+  [index: number]: DictationResult;
+};
 
-function statusClass(status: StepStatus) {
-  if (status === "done") {
-    return "bg-emerald-500";
+type DictationEvent = {
+  resultIndex: number;
+  results: DictationResultList;
+};
+
+type DictationRecognition = {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  onresult: ((event: DictationEvent) => void) | null;
+  onerror: (() => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+};
+
+type DictationConstructor = new () => DictationRecognition;
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+const MODEL_OPTIONS = [
+  {
+    id: "opus-4.6",
+    label: "Opus 4.6",
+    detail: "Deeper reasoning",
+  },
+  {
+    id: "chat-gpt-5.4",
+    label: "ChatGPT 5.4",
+    detail: "Faster responses",
+  },
+] as const;
+
+function inferSymbol(query: string): string {
+  const candidates = query.match(/\b[A-Z]{1,5}\b/g);
+  return candidates?.at(-1) ?? "AAPL";
+}
+
+function formatAssistantReply(payload: AnalyzeResponse): string {
+  const lines = [
+    `Symbol: ${payload.symbol}`,
+    `Signal: ${payload.signal.toUpperCase()}`,
+    `Confidence: ${(payload.confidence * 100).toFixed(1)}%`,
+    "",
+    payload.reasoning,
+  ];
+  if (payload.warning) {
+    lines.push("", `Warning: ${payload.warning}`);
   }
-  if (status === "running") {
-    return "bg-amber-400";
+  if (payload.error) {
+    lines.push("", `Error: ${payload.error}`);
   }
-  return "bg-zinc-600";
+  return lines.join("\n");
 }
 
 export default function HomePage() {
-  const [authMode, setAuthMode] = useState<AuthMode | null>(null);
-  const [selectedSession, setSelectedSession] = useState(0);
+  const [input, setInput] = useState("");
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isDictating, setIsDictating] = useState(false);
+  const [isDictationSupported, setIsDictationSupported] = useState(true);
+  const [selectedModelId, setSelectedModelId] = useState<(typeof MODEL_OPTIONS)[number]["id"]>(
+    "chat-gpt-5.4"
+  );
+  const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
+  const recognitionRef = useRef<DictationRecognition | null>(null);
 
-  const lastQuestion = useMemo(() => {
-    for (let idx = messages.length - 1; idx >= 0; idx -= 1) {
-      if (messages[idx]?.role === "user") {
-        return messages[idx].content;
-      }
+  const hasMessages = messages.length > 0;
+  const selectedModel = useMemo(
+    () => MODEL_OPTIONS.find((option) => option.id === selectedModelId) ?? MODEL_OPTIONS[0],
+    [selectedModelId]
+  );
+
+  const placeholder = useMemo(
+    () =>
+      hasMessages
+        ? "Ask follow-up about the current setup..."
+        : "Ask anything about a stock, signal, or strategy...",
+    [hasMessages]
+  );
+
+  useEffect(() => {
+    const speechWindow = window as Window & {
+      SpeechRecognition?: DictationConstructor;
+      webkitSpeechRecognition?: DictationConstructor;
+    };
+    const Recognition = speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition;
+
+    if (!Recognition) {
+      setIsDictationSupported(false);
+      return;
     }
-    return "No question yet.";
+
+    const recognition = new Recognition();
+    recognition.lang = "sl-SI";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onresult = (event) => {
+      const transcriptParts: string[] = [];
+      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+        const part = event.results[index]?.transcript?.trim();
+        if (part) {
+          transcriptParts.push(part);
+        }
+      }
+      if (transcriptParts.length === 0) {
+        return;
+      }
+      const transcript = transcriptParts.join(" ").trim();
+      setInput((current) => {
+        const trimmedCurrent = current.trim();
+        return trimmedCurrent.length > 0 ? `${trimmedCurrent} ${transcript}` : transcript;
+      });
+    };
+
+    recognition.onerror = () => {
+      setIsDictating(false);
+    };
+
+    recognition.onend = () => {
+      setIsDictating(false);
+    };
+
+    recognitionRef.current = recognition;
+
+    return () => {
+      recognition.stop();
+      recognitionRef.current = null;
+    };
   }, []);
 
-  const modalTitle = useMemo(() => {
-    if (authMode === "login") {
-      return "Log in";
+  function toggleDictation() {
+    if (isLoading || !isDictationSupported) {
+      return;
     }
-    if (authMode === "signup") {
-      return "Sign up for free";
+
+    if (isDictating) {
+      recognitionRef.current?.stop();
+      setIsDictating(false);
+      return;
     }
-    return "";
-  }, [authMode]);
+
+    try {
+      recognitionRef.current?.start();
+      setIsDictating(true);
+    } catch {
+      setIsDictating(false);
+    }
+  }
+
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const query = input.trim();
+    if (!query || isLoading) return;
+
+    if (isDictating) {
+      recognitionRef.current?.stop();
+      setIsDictating(false);
+    }
+
+    const userMessage: ChatMessage = {
+      id: `user-${Date.now()}`,
+      role: "user",
+      content: query,
+    };
+    setMessages((prev) => [...prev, userMessage]);
+    setInput("");
+    setIsLoading(true);
+
+    try {
+      const symbol = inferSymbol(query);
+      const response = await fetch(`${API_BASE_URL}/signals/analyze`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Model-Preference": selectedModelId,
+        },
+        body: JSON.stringify({
+          query,
+          symbol,
+          horizon: "swing",
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API ${response.status}: ${errorText}`);
+      }
+
+      const data = (await response.json()) as AnalyzeResponse;
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `assistant-${Date.now()}`,
+          role: "assistant",
+          content: formatAssistantReply(data),
+        },
+      ]);
+    } catch (error) {
+      const text = error instanceof Error ? error.message : "Unknown error";
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `assistant-error-${Date.now()}`,
+          role: "assistant",
+          content: `I could not complete the analysis.\n\n${text}`,
+        },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  const composer = (
+    <form onSubmit={onSubmit} className="relative w-full">
+      <div className="rounded-2xl border border-zinc-800 bg-zinc-950/80 px-5 py-3 shadow-[0_0_60px_rgba(22,78,163,0.12)] backdrop-blur-sm">
+        <div className="flex items-center gap-3">
+          <input
+            type="text"
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            placeholder={placeholder}
+            className="w-full bg-transparent text-sm text-zinc-100 placeholder:text-zinc-500 outline-none"
+          />
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsModelMenuOpen((prev) => !prev)}
+              className="inline-flex min-w-[104px] shrink-0 items-center justify-between gap-1 whitespace-nowrap rounded-full border border-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-200 transition hover:bg-zinc-900"
+            >
+              {selectedModel.label}
+              <span className="text-zinc-500">▾</span>
+            </button>
+            {isModelMenuOpen && (
+              <div className="absolute right-0 bottom-12 z-20 w-52 rounded-2xl border border-zinc-700 bg-zinc-900/95 p-2 shadow-xl backdrop-blur">
+                {MODEL_OPTIONS.map((option) => {
+                  const isSelected = option.id === selectedModelId;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedModelId(option.id);
+                        setIsModelMenuOpen(false);
+                      }}
+                      className={`mb-1 w-full rounded-xl px-3 py-2 text-left transition last:mb-0 ${
+                        isSelected ? "bg-zinc-800 text-white" : "text-zinc-300 hover:bg-zinc-800/70"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">{option.label}</span>
+                        {isSelected && <span className="text-xs text-zinc-400">✓</span>}
+                      </div>
+                      <p className="mt-0.5 text-xs text-zinc-500">{option.detail}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={toggleDictation}
+            disabled={isLoading || !isDictationSupported}
+            title={isDictating ? "Stop dictation" : "Dictation"}
+            className={`inline-flex h-9 w-9 items-center justify-center rounded-full border transition disabled:cursor-not-allowed disabled:opacity-50 ${
+              isDictating
+                ? "border-red-500/60 bg-red-500/20 text-red-100"
+                : "border-zinc-700 bg-zinc-900 text-zinc-100 hover:bg-zinc-800"
+            }`}
+          >
+            {isDictating ? (
+              <span className="h-2.5 w-2.5 rounded-[2px] bg-current" />
+            ) : (
+              <svg
+                aria-hidden
+                viewBox="0 0 24 24"
+                className="h-4 w-4 fill-none stroke-current"
+                strokeWidth="1.8"
+              >
+                <path d="M12 4a3 3 0 0 1 3 3v5a3 3 0 1 1-6 0V7a3 3 0 0 1 3-3Z" />
+                <path d="M5 11.5a7 7 0 0 0 14 0" />
+                <path d="M12 18.5v2.5" />
+              </svg>
+            )}
+          </button>
+          <button
+            type="submit"
+            disabled={isLoading || input.trim().length === 0}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-zinc-100 text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+            title="Send"
+          >
+            <svg
+              aria-hidden
+              viewBox="0 0 24 24"
+              className="h-4 w-4 fill-none stroke-current"
+              strokeWidth="2"
+            >
+              <path d="M12 17V7" />
+              <path d="m7 12 5-5 5 5" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </form>
+  );
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[270px_1fr_340px]">
-        <aside className="border-b border-zinc-800 bg-zinc-950/95 p-4 lg:border-b-0 lg:border-r">
-          <h2 className="mb-4 text-sm font-semibold tracking-wide text-zinc-400">Chats</h2>
-          <button className="mb-4 w-full rounded-lg border border-zinc-700 px-3 py-2 text-left text-sm hover:bg-zinc-900">
-            + New chat
-          </button>
-          <div className="space-y-1">
-            {sessions.map((session, index) => {
-              const isActive = index === selectedSession;
-              return (
-                <button
-                  key={session}
-                  onClick={() => setSelectedSession(index)}
-                  className={`w-full rounded-lg px-3 py-2 text-left text-sm transition ${
-                    isActive ? "bg-zinc-800 text-zinc-100" : "text-zinc-300 hover:bg-zinc-900"
-                  }`}
-                  type="button"
-                >
-                  {session}
-                </button>
-              );
-            })}
-          </div>
-        </aside>
-
-        <section className="flex min-h-[60vh] flex-col border-b border-zinc-800 lg:border-b-0 lg:border-r">
-          <header className="flex items-center justify-end gap-2 border-b border-zinc-800 px-4 py-3">
-            <button
-              type="button"
-              onClick={() => setAuthMode("login")}
-              className="rounded-full border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-100 hover:bg-zinc-900"
-            >
-              Log in
-            </button>
-            <button
-              type="button"
-              onClick={() => setAuthMode("signup")}
-              className="rounded-full bg-zinc-100 px-4 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-200"
-            >
-              Sign up for free
-            </button>
-          </header>
-
-          <div className="flex-1 space-y-4 overflow-y-auto px-4 py-6">
-            {messages.map((message, index) => {
-              const isUser = message.role === "user";
-              return (
-                <div
-                  key={`${message.role}-${index}`}
-                  className={`flex ${isUser ? "justify-end" : "justify-start"}`}
-                >
-                  <div
-                    className={`max-w-2xl rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-                      isUser ? "bg-zinc-700 text-zinc-100" : "bg-zinc-900 text-zinc-200"
-                    }`}
-                  >
-                    {message.content}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <footer className="border-t border-zinc-800 p-4">
-            <div className="rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3">
-              <input
-                className="w-full bg-transparent text-sm text-zinc-100 placeholder-zinc-500 outline-none"
-                placeholder="Ask anything about your strategy..."
-                type="text"
-              />
-            </div>
-          </footer>
-        </section>
-
-        <aside className="bg-zinc-950 p-4">
-          <h2 className="mb-1 text-sm font-semibold tracking-wide text-zinc-400">
-            Workflow reasoning
-          </h2>
-          <p className="mb-4 text-xs text-zinc-500">Session: {sessions[selectedSession]}</p>
-          <div className="mb-3 rounded-xl border border-zinc-800 bg-zinc-900/80 p-3">
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-              Last question
-            </p>
-            <p className="text-xs text-zinc-300">{lastQuestion}</p>
-          </div>
-          <div className="space-y-3">
-            {reasoningSteps.map((step) => (
-              <div
-                key={step.label}
-                className="rounded-xl border border-zinc-800 bg-zinc-900/70 p-3"
-              >
-                <div className="mb-2 flex items-center gap-2">
-                  <span className={`h-2.5 w-2.5 rounded-full ${statusClass(step.status)}`} />
-                  <p className="text-sm font-medium text-zinc-100">{step.label}</p>
-                </div>
-                <p className="text-xs text-zinc-400">{step.detail}</p>
-                <div className="mt-2 flex items-center gap-4 text-[11px] text-zinc-500">
-                  <span>Tokens: {step.tokens ?? "-"}</span>
-                  <span>Duration: {step.durationMs ? `${step.durationMs} ms` : "-"}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </aside>
+    <div className="relative min-h-screen overflow-hidden bg-black text-zinc-100">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.06),transparent_40%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_10%,rgba(70,109,182,0.22),transparent_45%)]" />
       </div>
 
-      {authMode && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 px-4">
-          <div className="w-full max-w-md rounded-2xl border border-zinc-700 bg-zinc-900 p-5 shadow-2xl">
-            <div className="mb-4 flex items-start justify-between">
-              <div>
-                <h3 className="text-xl font-semibold text-zinc-100">{modalTitle}</h3>
-                <p className="mt-1 text-sm text-zinc-400">
-                  Auth backend will be connected with FastAPI JWT later.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setAuthMode(null)}
-                className="rounded-md px-2 py-1 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
-              >
-                x
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              <input
-                type="email"
-                className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm outline-none placeholder:text-zinc-500 focus:border-zinc-500"
-                placeholder="Email"
-              />
-              <input
-                type="password"
-                className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm outline-none placeholder:text-zinc-500 focus:border-zinc-500"
-                placeholder="Password"
-              />
-              {authMode === "signup" && (
-                <input
-                  type="password"
-                  className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm outline-none placeholder:text-zinc-500 focus:border-zinc-500"
-                  placeholder="Confirm password"
-                />
-              )}
-              <button
-                type="button"
-                className="mt-1 w-full rounded-lg bg-zinc-100 px-3 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-200"
-              >
-                {authMode === "login" ? "Continue" : "Create account"}
-              </button>
-            </div>
-          </div>
+      <header className="relative z-10 flex items-center justify-between px-6 py-6 md:px-10">
+        <div className="flex items-center gap-2 text-sm font-semibold tracking-[0.2em] text-zinc-300">
+          <span className="text-base text-white">V</span>
+          <span>VERITAKE</span>
         </div>
-      )}
+        <div className="flex items-center gap-2">
+          <Link
+            href="/sign-in"
+            className="rounded-full border border-zinc-700 px-4 py-2 text-sm font-medium text-zinc-200 transition hover:bg-zinc-900 hover:text-white"
+          >
+            Sign in
+          </Link>
+          <Link
+            href="/sign-up"
+            className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-zinc-200"
+          >
+            Sign up
+          </Link>
+        </div>
+      </header>
+
+      <main className="relative z-10 mx-auto flex min-h-[calc(100vh-88px)] w-full max-w-5xl flex-col px-6 pb-8">
+        {!hasMessages ? (
+          <div className="flex min-h-[calc(100vh-160px)] flex-col items-center justify-center">
+            <div className="mb-10 text-center">
+              <p className="mb-3 text-xs uppercase tracking-[0.35em] text-zinc-500">
+                Market Intelligence Workspace
+              </p>
+              <h1 className="text-5xl font-semibold tracking-tight text-white md:text-6xl">Veritake</h1>
+            </div>
+            <div className="w-full max-w-2xl">{composer}</div>
+          </div>
+        ) : (
+          <>
+            <div className="flex-1 overflow-y-auto px-1">
+              {messages.map((message) => {
+                const isUser = message.role === "user";
+                return (
+                  <div
+                    key={message.id}
+                    className={`mb-5 flex ${isUser ? "justify-end" : "justify-start"}`}
+                  >
+                    <article
+                      className={`max-w-3xl whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                        isUser ? "bg-zinc-800 text-zinc-100" : "bg-zinc-950/90 text-zinc-300"
+                      }`}
+                    >
+                      {message.content}
+                    </article>
+                  </div>
+                );
+              })}
+              {isLoading && <p className="text-sm text-zinc-500">Analyzing with agents...</p>}
+            </div>
+            <div className="pt-4">{composer}</div>
+          </>
+        )}
+      </main>
     </div>
   );
 }

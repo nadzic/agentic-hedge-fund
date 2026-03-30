@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Agentic Hedge Fund Chat UI",
-  description: "Chat interface with session list and agent reasoning stream",
+  title: "Veritake",
+  description: "Market research and multi-agent signal intelligence workspace",
 };
 
 export default function RootLayout({
