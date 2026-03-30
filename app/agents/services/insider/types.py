@@ -10,6 +10,9 @@ class InsiderSnapshot:
   sell_value_used: float
   net_shares: float
   net_value_used: float
+  buy_value_usd: float
+  sell_value_usd: float
+  net_value_usd: float
 
 @dataclass(frozen=True)
 class InsiderDecision:
