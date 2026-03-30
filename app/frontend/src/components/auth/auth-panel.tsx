@@ -40,9 +40,11 @@ export function AuthPanel({ variant }: AuthPanelProps) {
   const [password, setPassword] = useState("");
   const [isBusy, setIsBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [authAction, setAuthAction] = useState<"google" | "email" | null>(null);
 
   async function handleGoogleAuth() {
     setIsBusy(true);
+    setAuthAction("google");
     setMessage(null);
     let supabase;
     try {
@@ -51,6 +53,7 @@ export function AuthPanel({ variant }: AuthPanelProps) {
       const text = error instanceof Error ? error.message : "Invalid Supabase configuration.";
       setMessage(text);
       setIsBusy(false);
+      setAuthAction(null);
       return;
     }
     const redirectTo = `${window.location.origin}/auth/callback?next=/`;
@@ -61,12 +64,14 @@ export function AuthPanel({ variant }: AuthPanelProps) {
     if (error) {
       setMessage(error.message);
       setIsBusy(false);
+      setAuthAction(null);
     }
   }
 
   async function handleEmailAuth(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsBusy(true);
+    setAuthAction("email");
     setMessage(null);
 
     if (isSignIn) {
@@ -77,6 +82,7 @@ export function AuthPanel({ variant }: AuthPanelProps) {
         const text = error instanceof Error ? error.message : "Invalid Supabase configuration.";
         setMessage(text);
         setIsBusy(false);
+        setAuthAction(null);
         return;
       }
       const { error } = await supabase.auth.signInWithPassword({
@@ -90,6 +96,7 @@ export function AuthPanel({ variant }: AuthPanelProps) {
         router.refresh();
       }
       setIsBusy(false);
+      setAuthAction(null);
       return;
     }
 
@@ -101,6 +108,7 @@ export function AuthPanel({ variant }: AuthPanelProps) {
       const text = error instanceof Error ? error.message : "Invalid Supabase configuration.";
       setMessage(text);
       setIsBusy(false);
+      setAuthAction(null);
       return;
     }
     const { error } = await supabase.auth.signUp({
@@ -114,6 +122,7 @@ export function AuthPanel({ variant }: AuthPanelProps) {
       setMessage("Check your email to confirm your account.");
     }
     setIsBusy(false);
+    setAuthAction(null);
   }
 
   return (
@@ -135,27 +144,39 @@ export function AuthPanel({ variant }: AuthPanelProps) {
           type="button"
           onClick={handleGoogleAuth}
           disabled={isBusy}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-zinc-200"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-70"
         >
-          <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4">
-            <path
-              fill="#EA4335"
-              d="M12 10.2v3.9h5.4c-.24 1.26-.96 2.34-2.04 3.06l3.3 2.55c1.92-1.77 3.03-4.38 3.03-7.5 0-.72-.06-1.41-.18-2.07H12z"
-            />
-            <path
-              fill="#34A853"
-              d="M12 22c2.7 0 4.97-.9 6.63-2.43l-3.3-2.55c-.9.6-2.07.96-3.33.96-2.55 0-4.71-1.71-5.49-4.02l-3.42 2.64C4.74 19.89 8.1 22 12 22z"
-            />
-            <path
-              fill="#4A90E2"
-              d="M6.51 13.96A5.97 5.97 0 0 1 6.2 12c0-.69.12-1.35.3-1.96L3.09 7.4A9.9 9.9 0 0 0 2 12c0 1.59.39 3.09 1.09 4.4l3.42-2.64z"
-            />
-            <path
-              fill="#FBBC05"
-              d="M12 6.02c1.47 0 2.79.51 3.84 1.5l2.88-2.88C16.97 2.98 14.7 2 12 2 8.1 2 4.74 4.11 3.09 7.4l3.42 2.64c.78-2.31 2.94-4.02 5.49-4.02z"
-            />
-          </svg>
-          {content.primary}
+          {isBusy && authAction === "google" ? (
+            <>
+              <span
+                aria-hidden
+                className="h-4 w-4 animate-spin rounded-full border-2 border-black/25 border-t-black"
+              />
+              Redirecting...
+            </>
+          ) : (
+            <>
+              <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4">
+                <path
+                  fill="#EA4335"
+                  d="M12 10.2v3.9h5.4c-.24 1.26-.96 2.34-2.04 3.06l3.3 2.55c1.92-1.77 3.03-4.38 3.03-7.5 0-.72-.06-1.41-.18-2.07H12z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 22c2.7 0 4.97-.9 6.63-2.43l-3.3-2.55c-.9.6-2.07.96-3.33.96-2.55 0-4.71-1.71-5.49-4.02l-3.42 2.64C4.74 19.89 8.1 22 12 22z"
+                />
+                <path
+                  fill="#4A90E2"
+                  d="M6.51 13.96A5.97 5.97 0 0 1 6.2 12c0-.69.12-1.35.3-1.96L3.09 7.4A9.9 9.9 0 0 0 2 12c0 1.59.39 3.09 1.09 4.4l3.42-2.64z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M12 6.02c1.47 0 2.79.51 3.84 1.5l2.88-2.88C16.97 2.98 14.7 2 12 2 8.1 2 4.74 4.11 3.09 7.4l3.42 2.64c.78-2.31 2.94-4.02 5.49-4.02z"
+                />
+              </svg>
+              {content.primary}
+            </>
+          )}
         </button>
 
         <div className="relative py-1">
@@ -194,7 +215,11 @@ export function AuthPanel({ variant }: AuthPanelProps) {
               disabled={isBusy}
               className="w-full rounded-full bg-zinc-100 px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:opacity-50"
             >
-              {isSignIn ? "Continue" : "Create account"}
+              {isBusy && authAction === "email"
+                ? "Please wait..."
+                : isSignIn
+                  ? "Continue"
+                  : "Create account"}
             </button>
           </form>
         )}

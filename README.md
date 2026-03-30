@@ -7,188 +7,75 @@
 ![LangGraph](https://img.shields.io/badge/LangGraph-agent%20orchestration-1C3C3C)
 ![Qdrant](https://img.shields.io/badge/Qdrant-vector%20search-DC244C)
 
-An end-to-end, agent-based research stack for equity signal generation using:
-- multi-node analyst orchestration (LangGraph),
-- hybrid RAG retrieval (Qdrant + dense/sparse search),
-- LLM reasoning and synthesis,
-- FastAPI + Next.js for API and UI delivery.
+An AI-native, multi-agent research assistant for stock trade ideas.
 
-## What This Project Does
+The project turns one user prompt into a structured signal by combining:
+- analyst-specialized agents,
+- retrieval-augmented market context,
+- risk constraints,
+- and a production-style API + frontend.
 
-Given a user query (for example: *"Should I buy NVDA for a swing trade?"*), the system:
-1. Fan-outs work across analyst nodes (fundamentals, technicals, valuation, sentiment),
-2. Runs domain services per analyst (indicators, valuation/fundamental metrics, sentiment sources),
-3. Optionally generates structured analyst narratives with LLMs,
-4. Synthesizes analyst outputs into a final suggestion,
-5. Applies risk constraints before returning a response through the API.
+## Portfolio Overview
 
-## Architecture
+### Problem
 
-### Core Components
-- `app/agents/graph/`: LangGraph workflow, state, schemas, and nodes
-- `app/agents/services/`: domain services used by analyst nodes
-  - `fundamentals/`
-  - `technicals/`
-  - `valuation/`
-  - `sentiment/`
-- `app/rag/indexing/`: ingestion + chunking + Qdrant indexing
-- `app/rag/retrieval/`: hybrid retrieval with metadata filters
-- `app/rag/generation/`: answer generation grounded in retrieved context
-- `app/api/`: FastAPI routers, schemas, and endpoints
-- `app/services/`: API service layer bridging endpoints to graph/RAG pipelines
-- `app/frontend/`: Next.js app for signals, RAG query, and ingest workflows
+Retail-style stock analysis is often fragmented: one tool for charts, another for news, another for valuation, and no consistent risk layer.
 
-### High-Level Flow
-`API request -> Graph orchestration -> Analyst services (+ optional LLM reasoning) -> Synthesis -> Risk manager -> API response`
+### Solution
 
-## Tech Stack
+This project provides a single pipeline that:
+1. understands and validates user intent,
+2. gathers context (RAG + insider signals),
+3. runs multiple analyst agents in parallel,
+4. synthesizes a final recommendation,
+5. enforces risk thresholds before returning output.
 
-- Python 3.11+
-- FastAPI + Uvicorn
-- LangGraph + LangChain
-- LlamaIndex
-- Qdrant (vector database)
-- yfinance + external news APIs (optional) for analyst data
-- Next.js (frontend)
-- Docker + Docker Compose
-- `uv` for dependency management
+### Why it is interesting
 
-## Repository Structure
+- Multi-agent orchestration with clear node boundaries (`LangGraph`).
+- Retrieval + tool-augmented reasoning in one flow.
+- End-to-end system design (backend, frontend, auth, voice input, CI).
+- Practical API contract and reproducible local environment.
 
-```text
-app/
-  frontend/
-    src/
-      app/
-      components/
-      lib/
-  api/
-    router.py
-    routes/
-      health.py
-      analyze.py
-      rag_query.py
-      rag_ingest.py
-    schemas/
-      signal.py
-      rag.py
-  agents/
-    graph/
-      workflow.py
-      state.py
-      schemas.py
-      nodes/
-        orchestrator.py
-        analysts/
-          __init__.py
-          fundamental_analyst.py
-          technical_analyst.py
-          valuation_analyst.py
-          sentiment_analyst.py
-        synthesizer.py
-        risk_manager.py
-    services/
-      llm.py
-      fundamentals/
-      technicals/
-      valuation/
-      sentiment/
-  rag/
-    ingestion/
-    indexing/
-    retrieval/
-    generation/
-    reranking/
-  services/
-    signal_service.py
-Dockerfile
-Dockerfile.dev
-docker-compose.yml
-```
+## What I Built
 
-## Quickstart (Local with `uv`)
+### Backend intelligence pipeline
 
-### 1) Install dependencies
-```bash
-uv sync
-```
+- `symbol_resolver` infers/normalizes ticker symbol from user input.
+- `input_classifier` validates query, symbol and horizon.
+- `request_clarification` returns graceful no-trade + explanation for bad inputs.
+- `market_research_agent` enriches state with:
+  - RAG context from indexed documents,
+  - insider-trading summary signal.
+- Analyst fan-out nodes:
+  - fundamentals,
+  - technicals,
+  - valuation,
+  - sentiment.
+- `synthesizer` combines analyst outputs into one proposal.
+- `risk_manager` clamps/guards final output using risk limits.
 
-### 2) Configure environment
-Create `.env` (or copy from `sample.env`) and set at least:
-- `OPENAI_API_KEY`
-- `LLM_PROVIDER`
-- `LLM_MODEL_NAME`
-- `QDRANT_URL` (for local non-Docker run, usually `http://localhost:6333`)
-- `ALLOWED_ORIGINS` (for local frontend, usually `http://localhost:3000,http://127.0.0.1:3000`)
-- Optional analyst-source keys:
-  - `FINNHUB_API_KEY` (sentiment news source)
-  - `ANTHROPIC_API_KEY` (if using Anthropic provider)
+### Product-facing features
 
-### 3) Run API
-```bash
-uv run uvicorn app.main:app --reload --app-dir .
-```
+- FastAPI endpoints for analysis, RAG query, and ingestion.
+- Metadata endpoint `GET /api/v1/meta/model` for runtime model transparency.
+- Next.js chat-style frontend for analysis workflow.
+- Supabase authentication (`/sign-in`, `/sign-up`, OAuth callback).
+- Voice dictation + transcription via `POST /api/transcribe` (ElevenLabs proxy route).
 
-Open:
-- API docs: `http://localhost:8000/docs`
-- Health: `http://localhost:8000/api/v1/health`
+## System Flow
 
-### 4) Run graph debug harness (optional)
-```bash
-uv run python -m app.agents.main
-```
-This prints stream updates and the final graph state for rapid node debugging.
+`request -> symbol_resolver -> input_classifier -> clarification OR research -> analyst fan-out -> synthesizer -> risk_manager -> response`
 
-## Quickstart (Docker Compose)
+## API Surface
 
-Runs API, Qdrant, and frontend for local development with hot-reload.
+- `GET /api/v1/health`
+- `GET /api/v1/meta/model`
+- `POST /api/v1/signals/analyze`
+- `POST /api/v1/rag/query`
+- `POST /api/v1/rag/ingest-index`
 
-### Start
-```bash
-docker compose up --build
-```
-
-### Useful commands
-```bash
-# Start in background
-docker compose up --build -d
-
-# Follow logs
-docker compose logs -f api
-docker compose logs -f qdrant
-docker compose logs -f frontend
-
-# Stop and remove containers
-docker compose down
-
-# Stop + remove volumes (resets local Qdrant data)
-docker compose down -v
-```
-
-### Endpoints
-- API docs: `http://localhost:8000/docs`
-- Health: `http://localhost:8000/api/v1/health`
-- Analyze: `POST http://localhost:8000/api/v1/signals/analyze`
-- RAG Query: `POST http://localhost:8000/api/v1/rag/query`
-- RAG Ingest + Index: `POST http://localhost:8000/api/v1/rag/ingest-index`
-- Qdrant: `http://localhost:6333`
-- Frontend: `http://localhost:3000`
-
-## API Endpoints
-
-### Health Check
-`GET /api/v1/health`
-
-### Analyze Signal
-`POST /api/v1/signals/analyze`
-
-### RAG Query
-`POST /api/v1/rag/query`
-
-### RAG Ingest + Index
-`POST /api/v1/rag/ingest-index`
-
-Example request:
+Example analyze request:
 
 ```json
 {
@@ -198,19 +85,7 @@ Example request:
 }
 ```
 
-
-Example curl:
-```bash
-curl -X POST "http://localhost:8000/api/v1/signals/analyze" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "Should I buy NVDA for a swing trade?",
-    "symbol": "NVDA",
-    "horizon": "swing"
-  }'
-```
-
-Example response (shape):
+Example analyze response shape:
 
 ```json
 {
@@ -223,33 +98,117 @@ Example response (shape):
 }
 ```
 
-## Deployment Model
+## Tech Stack
 
-- **Local development:** Docker Compose with API + frontend + local Qdrant.
-- **Production / Cloud Run (recommended):**
-  - deploy API and frontend as separate Cloud Run services,
-  - use managed/external Qdrant service (`QDRANT_URL`),
-  - inject secrets via Secret Manager (LLM keys, optional data-provider keys),
-  - set `NEXT_PUBLIC_API_URL` at frontend image build time,
-  - set `ALLOWED_ORIGINS` on API runtime to frontend Cloud Run domain.
+### Backend
 
-## CI
+- Python 3.11
+- FastAPI + Uvicorn
+- LangGraph / LangChain
+- LlamaIndex
+- Qdrant
+- yfinance + external APIs (optional, key-dependent)
 
-GitHub Actions runs quality checks on push to `main`:
+### Frontend
+
+- Next.js 16
+- React 19
+- TypeScript
+- Supabase SSR client
+
+### Tooling
+
+- `uv` for Python dependency management
+- Docker + Docker Compose
+- Ruff + BasedPyright + Pytest
+- GitHub Actions CI
+
+## Run Locally
+
+### 1) Backend
+
+```bash
+uv sync
+uv run uvicorn app.main:app --reload --app-dir .
+```
+
+Create `.env` (copy `.env.example` or `sample.env`) and configure at least:
+- `OPENAI_API_KEY` (or another configured provider key),
+- `LLM_PROVIDER`,
+- `LLM_MODEL_NAME`,
+- `QDRANT_URL`,
+- `ALLOWED_ORIGINS`.
+
+Optional:
+- `ANTHROPIC_API_KEY`
+- `FINNHUB_API_KEY`
+- `LANGFUSE_PUBLIC_KEY`
+- `LANGFUSE_SECRET_KEY`
+
+### 2) Frontend
+
+```bash
+cd app/frontend
+npm install
+npm run dev
+```
+
+Set `app/frontend/.env.local`:
+- `NEXT_PUBLIC_API_URL` (default `http://localhost:8000/api/v1`)
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `ELEVENLABS_API_KEY` (required for voice transcription)
+
+### 3) Full stack with Docker
+
+```bash
+docker compose up --build
+```
+
+Useful URLs:
+- API docs: `http://localhost:8000/docs`
+- API health: `http://localhost:8000/api/v1/health`
+- Frontend: `http://localhost:3000`
+- Qdrant: `http://localhost:6333`
+
+## Project Structure
+
+```text
+app/
+  agents/
+    graph/
+      nodes/
+    services/
+      fundamentals/
+      technicals/
+      valuation/
+      sentiment/
+      insider/
+  api/
+    routes/
+    schemas/
+  rag/
+    ingestion/
+    indexing/
+    retrieval/
+    generation/
+    reranking/
+    pipelines/
+  frontend/
+    src/
+      app/
+      components/
+      lib/
+```
+
+## Quality
+
+CI checks on push to `main`:
 - Ruff lint
-- BasedPyright type checking
-- Pytest (if `tests/` exists)
-- Python compile smoke check
-- Docker build job
-
-## Current Status
-
-This repository is actively evolving. Key capabilities are in place, with ongoing improvements in:
-- analyst node logic depth,
-- weighting and consensus logic in synthesis,
-- source-backed analyst services (technicals/fundamentals/valuation/sentiment),
-- reranking quality,
-- evaluation and monitoring.
+- BasedPyright type checks
+- Pytest (when tests exist)
+- Python compile smoke checks
+- Docker build
 
 ## Disclaimer
 
