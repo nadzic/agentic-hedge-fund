@@ -6,12 +6,16 @@ import {
   ANALYZE_TIMEOUT_MS,
   API_BASE_URL,
   DICTATION_MAX_DURATION_MS,
-  ModelOptionId,
 } from "@/components/home/constants";
 import { AppHeader } from "@/components/home/app-header";
 import { Composer } from "@/components/home/composer";
 import { MessagesPane } from "@/components/home/messages-pane";
-import { AnalyzeResponse, ChatMessage, TranscriptionResponse } from "@/components/home/types";
+import {
+  AnalyzeResponse,
+  ChatMessage,
+  ModelInfoResponse,
+  TranscriptionResponse,
+} from "@/components/home/types";
 import {
   formatAssistantReply,
   getAnalyzeErrorMessage,
@@ -28,8 +32,7 @@ export default function HomePage() {
   const [isDictating, setIsDictating] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isDictationSupported, setIsDictationSupported] = useState(true);
-  const [selectedModelId, setSelectedModelId] = useState<ModelOptionId>("chat-gpt-5.4");
-  const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
+  const [backendModelName, setBackendModelName] = useState("gpt-4o-mini");
   const inputRef = useRef<HTMLInputElement | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioStreamRef = useRef<MediaStream | null>(null);
@@ -71,6 +74,32 @@ export default function HomePage() {
       audioStreamRef.current = null;
       transcriptionAbortRef.current?.abort();
       transcriptionAbortRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    async function fetchModelInfo() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/meta/model`);
+        if (!response.ok) {
+          return;
+        }
+
+        const data = (await response.json()) as ModelInfoResponse;
+        if (!active || !data.model?.trim()) {
+          return;
+        }
+        setBackendModelName(data.model.trim());
+      } catch {
+        // Keep default demo model in UI if request fails.
+      }
+    }
+
+    void fetchModelInfo();
+    return () => {
+      active = false;
     };
   }, []);
 
@@ -224,7 +253,6 @@ export default function HomePage() {
         signal: abortController.signal,
         headers: {
           "Content-Type": "application/json",
-          "X-Model-Preference": selectedModelId,
         },
         body: JSON.stringify({
           query,
@@ -272,13 +300,6 @@ export default function HomePage() {
       onInputChange={setInput}
       onInputFocus={() => setIsInputFocused(true)}
       onInputBlur={() => setIsInputFocused(false)}
-      selectedModelId={selectedModelId}
-      isModelMenuOpen={isModelMenuOpen}
-      onToggleModelMenu={() => setIsModelMenuOpen((prev) => !prev)}
-      onSelectModel={(id) => {
-        setSelectedModelId(id);
-        setIsModelMenuOpen(false);
-      }}
       isDictating={isDictating}
       isTranscribing={isTranscribing}
       isDictationSupported={isDictationSupported}
@@ -314,11 +335,13 @@ export default function HomePage() {
                 Veritake
               </h1>
             </div>
+          <p className="mb-3 text-xs text-zinc-500">Model: {backendModelName}</p>
             <div className="w-full max-w-2xl">{composer}</div>
           </div>
         ) : (
           <>
             <MessagesPane messages={messages} isLoading={isLoading} />
+          <p className="pt-2 text-center text-xs text-zinc-500">Model: {backendModelName}</p>
             <div className="pt-4">{composer}</div>
           </>
         )}

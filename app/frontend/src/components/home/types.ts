@@ -17,4 +17,8 @@ export type TranscriptionResponse = {
   text: string;
 };
 
+export type ModelInfoResponse = {
+  model: string;
+};
+
 export type Horizon = "intraday" | "swing" | "position";
