@@ -210,6 +210,14 @@ CI checks on push to `main`:
 - Python compile smoke checks
 - Docker build
 
+## TODOs
+
+- jobs, workers, queues for ingestion and indexing
+- fallback models
+- try out smaller models for classification and routing and just bigger models for final generation
+- fallback when api fails, default safe response
+- llm provider orchestration to easy replace models 
+
 ## Disclaimer
 
 Educational/research project. Not financial advice.
