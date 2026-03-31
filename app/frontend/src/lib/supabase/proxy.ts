@@ -8,22 +8,22 @@ function isLikelySupabasePublicKey(value: string): boolean {
 export async function updateSession(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error(
-      "Missing Supabase configuration. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.",
-    );
-  }
-  if (!isLikelySupabasePublicKey(supabaseAnonKey)) {
-    throw new Error(
-      "Invalid NEXT_PUBLIC_SUPABASE_ANON_KEY format. Use the Supabase anon/publishable key (not project ref).",
-    );
+  const isConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+  const hasValidKey = Boolean(supabaseAnonKey && isLikelySupabasePublicKey(supabaseAnonKey));
+  if (!isConfigured || !hasValidKey) {
+    // Keep app available even when auth env is missing/invalid.
+    return NextResponse.next({
+      request,
+    });
   }
 
   let response = NextResponse.next({
     request,
   });
+  const resolvedSupabaseUrl = supabaseUrl as string;
+  const resolvedSupabaseAnonKey = supabaseAnonKey as string;
 
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+  const supabase = createServerClient(resolvedSupabaseUrl, resolvedSupabaseAnonKey, {
     cookies: {
       getAll() {
         return request.cookies.getAll();
@@ -44,7 +44,11 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
-  await supabase.auth.getUser();
+  try {
+    await supabase.auth.getUser();
+  } catch {
+    // Do not block page rendering if auth refresh fails.
+  }
 
   return response;
 }

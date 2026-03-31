@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import {
@@ -10,6 +11,7 @@ import {
 import { AppHeader } from "@/components/home/app-header";
 import { Composer } from "@/components/home/composer";
 import { MessagesPane } from "@/components/home/messages-pane";
+import { ApiError, apiPost } from "@/lib/api/client";
 import {
   AnalyzeResponse,
   ChatMessage,
@@ -24,10 +26,17 @@ import {
   inferSymbol,
 } from "@/components/home/utils";
 
+type RateLimitNotice = {
+  message: string;
+  resetAt: string | null;
+  upgradeRequired: boolean;
+};
+
 export default function HomePage() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [rateLimitNotice, setRateLimitNotice] = useState<RateLimitNotice | null>(null);
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [isDictating, setIsDictating] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -40,6 +49,7 @@ export default function HomePage() {
   const stopTimeoutRef = useRef<number | null>(null);
   const transcriptionAbortRef = useRef<AbortController | null>(null);
 
+  const isRateLimited = rateLimitNotice !== null;
   const hasMessages = messages.length > 0;
   const placeholder = useMemo(
     () =>
@@ -225,7 +235,7 @@ export default function HomePage() {
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const query = input.trim();
-    if (!query || isLoading) return;
+    if (!query || isLoading || isRateLimited) return;
 
     if (isDictating) {
       stopRecording();
@@ -248,25 +258,11 @@ export default function HomePage() {
     try {
       const symbol = inferSymbol(query);
       const horizon = inferHorizon(query);
-      const response = await fetch(`${API_BASE_URL}/signals/analyze`, {
-        method: "POST",
-        signal: abortController.signal,
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          query,
-          symbol,
-          horizon,
-        }),
+      const data = await apiPost<AnalyzeResponse>("/signals/analyze", {
+        query,
+        symbol,
+        horizon,
       });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`API ${response.status}: ${errorText}`);
-      }
-
-      const data = (await response.json()) as AnalyzeResponse;
       setMessages((prev) => [
         ...prev,
         {
@@ -276,6 +272,25 @@ export default function HomePage() {
         },
       ]);
     } catch (error) {
+      if (error instanceof ApiError && error.status === 429) {
+        const rateLimitError = parseRateLimitError(error.payload);
+        setRateLimitNotice({
+          message: rateLimitError.message,
+          resetAt: rateLimitError.resetAt,
+          upgradeRequired: rateLimitError.upgradeRequired,
+        });
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `assistant-rate-limit-${Date.now()}`,
+            role: "assistant",
+            content: `${rateLimitError.message}${
+              rateLimitError.resetAt ? `\n\nTry again after: ${rateLimitError.resetAt}` : ""
+            }`,
+          },
+        ]);
+        return;
+      }
       const text = getAnalyzeErrorMessage(error, ANALYZE_TIMEOUT_MS);
       setMessages((prev) => [
         ...prev,
@@ -303,7 +318,7 @@ export default function HomePage() {
       isDictating={isDictating}
       isTranscribing={isTranscribing}
       isDictationSupported={isDictationSupported}
-      isLoading={isLoading}
+      isLoading={isLoading || isRateLimited}
       onToggleDictation={toggleDictation}
       showSuggestions={showSuggestions}
       visibleSuggestions={visibleSuggestions}
@@ -336,21 +351,97 @@ export default function HomePage() {
               </h1>
             </div>
             <p className="pb-2 text-center text-xs text-zinc-500">Model: {backendModelName}</p>
-            <div className="w-full max-w-3xl">{composer}</div>
+            <div
+              className={`w-full max-w-3xl transition ${
+                isRateLimited ? "pointer-events-none blur-[2px] opacity-60" : ""
+              }`}
+            >
+              {composer}
+            </div>
           </section>
         ) : (
           <>
-            <section className="hide-scrollbar mx-auto min-h-0 w-full max-w-3xl flex-1 overflow-y-auto pb-4">
+            <section
+              className={`hide-scrollbar mx-auto min-h-0 w-full max-w-3xl flex-1 overflow-y-auto pb-4 transition ${
+                isRateLimited ? "pointer-events-none blur-[2px] opacity-60" : ""
+              }`}
+            >
               <MessagesPane messages={messages} isLoading={isLoading} />
             </section>
 
-            <section className="sticky bottom-0 mt-2 bg-linear-to-t from-black via-black/95 to-transparent pt-3">
+            <section
+              className={`sticky bottom-0 mt-2 bg-linear-to-t from-black via-black/95 to-transparent pt-3 transition ${
+                isRateLimited ? "pointer-events-none blur-[2px] opacity-60" : ""
+              }`}
+            >
               <p className="pb-2 text-center text-xs text-zinc-500">Model: {backendModelName}</p>
               <div className="mx-auto w-full max-w-3xl">{composer}</div>
             </section>
           </>
         )}
+        {isRateLimited && rateLimitNotice && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-24 z-30 flex justify-center px-6">
+            <div className="pointer-events-auto w-full max-w-3xl rounded-2xl border border-zinc-700 bg-zinc-950/95 p-4 text-sm text-zinc-100 shadow-2xl">
+              <p className="font-medium text-white">{rateLimitNotice.message}</p>
+              {rateLimitNotice.resetAt && (
+                <p className="mt-1 text-xs text-zinc-400">Resets at: {rateLimitNotice.resetAt}</p>
+              )}
+              {rateLimitNotice.upgradeRequired && (
+                <div className="mt-3 flex items-center gap-2">
+                  <Link
+                    href="/sign-in"
+                    className="rounded-full border border-zinc-700 px-4 py-2 text-xs font-medium text-zinc-200 transition hover:bg-zinc-900 hover:text-white"
+                  >
+                    Sign in
+                  </Link>
+                  <Link
+                    href="/sign-up"
+                    className="rounded-full bg-white px-4 py-2 text-xs font-semibold text-black transition hover:bg-zinc-200"
+                  >
+                    Sign up
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
+}
+
+type RateLimitErrorPayload = {
+  message: string;
+  resetAt: string | null;
+  upgradeRequired: boolean;
+};
+
+function parseRateLimitError(payload: unknown): RateLimitErrorPayload {
+  const detail =
+    payload && typeof payload === "object" && "detail" in payload
+      ? (payload as { detail?: unknown }).detail
+      : payload;
+
+  const detailObject =
+    detail && typeof detail === "object" ? (detail as Record<string, unknown>) : {};
+  const messageFromApi = detailObject.message;
+  const resetAtFromApi = detailObject.reset_at;
+  const upgradeRequiredFromApi = detailObject.upgrade_required;
+
+  return {
+    message:
+      typeof messageFromApi === "string" && messageFromApi.trim().length > 0
+        ? messageFromApi
+        : "Free limit reached (2/day). Sign in or sign up to continue.",
+    resetAt: typeof resetAtFromApi === "string" ? formatResetAt(resetAtFromApi) : null,
+    upgradeRequired: upgradeRequiredFromApi === true,
+  };
+}
+
+function formatResetAt(value: string): string {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  return parsed.toLocaleString();
 }
