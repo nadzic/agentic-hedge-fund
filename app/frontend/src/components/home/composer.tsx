@@ -11,6 +11,7 @@ type ComposerProps = {
   isDictating: boolean;
   isTranscribing: boolean;
   isDictationSupported: boolean;
+  dictationDisabledReason: string | null;
   isLoading: boolean;
   onToggleDictation: () => void;
   showSuggestions: boolean;
@@ -29,6 +30,7 @@ export function Composer({
   isDictating,
   isTranscribing,
   isDictationSupported,
+  dictationDisabledReason,
   isLoading,
   onToggleDictation,
   showSuggestions,
@@ -55,9 +57,10 @@ export function Composer({
             <button
               type="button"
               onClick={onToggleDictation}
-              disabled={isLoading || isTranscribing || !isDictationSupported}
+              disabled={isLoading || isTranscribing || !isDictationSupported || Boolean(dictationDisabledReason)}
               title={
-                isTranscribing ? "Transcribing..." : isDictating ? "Stop dictation" : "Dictation"
+                dictationDisabledReason ??
+                (isTranscribing ? "Transcribing..." : isDictating ? "Stop dictation" : "Dictation")
               }
               className={`inline-flex h-9 w-9 items-center justify-center rounded-full border transition disabled:cursor-not-allowed disabled:opacity-50 ${
                 isDictating
@@ -98,6 +101,9 @@ export function Composer({
             </button>
           </div>
         </div>
+        {dictationDisabledReason && (
+          <p className="mt-2 text-xs text-amber-300">{dictationDisabledReason}</p>
+        )}
         {showSuggestions && (
           <div className="absolute top-full left-0 z-30 mt-2 w-full overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950/98 shadow-xl">
             {visibleSuggestions.map((prompt) => (

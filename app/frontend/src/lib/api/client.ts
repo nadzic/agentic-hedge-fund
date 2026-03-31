@@ -30,6 +30,7 @@ export async function apiPost<TResponse>(path: string, payload: unknown): Promis
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),

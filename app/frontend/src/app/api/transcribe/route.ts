@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import crypto from "node:crypto";
+import { NextRequest, NextResponse } from "next/server";
 
 type ElevenLabsTranscription = {
   text?: unknown;
@@ -7,7 +8,148 @@ type ElevenLabsTranscription = {
 
 export const runtime = "nodejs";
 
-export async function POST(request: Request) {
+const GUEST_COOKIE_NAME = "veritake_guest_id";
+const GUEST_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
+const DEFAULT_COOKIE_SECRET = "dev-change-me";
+const DEFAULT_TRANSCRIBE_DAILY_LIMIT = 2;
+
+const fallbackDailyCounter = new Map<string, number>();
+
+type RateLimitDecision = {
+  allowed: boolean;
+  limit: number;
+  remaining: number;
+  resetAt: string | null;
+};
+
+function getEnv(...names: string[]): string {
+  for (const name of names) {
+    const value = process.env[name];
+    if (typeof value === "string" && value.length > 0) {
+      return value;
+    }
+  }
+  return "";
+}
+
+function getCookieSecret(): string {
+  return getEnv("RATE_LIMIT_COOKIE_SECRET", "COOKIE_SIGNING_SECRET") || DEFAULT_COOKIE_SECRET;
+}
+
+function signGuestId(guestId: string): string {
+  return crypto.createHmac("sha256", getCookieSecret()).update(guestId).digest("hex").slice(0, 24);
+}
+
+function verifySignedGuestId(value: string | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+  const [guestId, providedSig] = value.split(".", 2);
+  if (!guestId || !providedSig) {
+    return null;
+  }
+  const expected = signGuestId(guestId);
+  if (providedSig.length !== expected.length) {
+    return null;
+  }
+  return crypto.timingSafeEqual(Buffer.from(providedSig), Buffer.from(expected)) ? guestId : null;
+}
+
+function dailyLimit(): number {
+  const raw = process.env.RATE_LIMIT_ANON_DAILY ?? `${DEFAULT_TRANSCRIBE_DAILY_LIMIT}`;
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isNaN(parsed) || parsed <= 0 ? DEFAULT_TRANSCRIBE_DAILY_LIMIT : parsed;
+}
+
+function getUtcWindowStart(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function buildFallbackDecision(guestId: string, limit: number): RateLimitDecision {
+  const counterKey = `${getUtcWindowStart()}:${guestId}`;
+  const currentCount = fallbackDailyCounter.get(counterKey) ?? 0;
+  const nextCount = currentCount + 1;
+  fallbackDailyCounter.set(counterKey, nextCount);
+
+  const allowed = nextCount <= limit;
+  return {
+    allowed,
+    limit,
+    remaining: Math.max(limit - nextCount, 0),
+    resetAt: null,
+  };
+}
+
+async function callSupabaseUsageRpc(guestId: string, limit: number): Promise<RateLimitDecision> {
+  const supabaseUrl = getEnv("SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL");
+  const supabaseKey = getEnv(
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_ANON_KEY",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+  );
+  if (!supabaseUrl || !supabaseKey) {
+    return buildFallbackDecision(guestId, limit);
+  }
+
+  try {
+    const response = await fetch(
+      `${supabaseUrl.replace(/\/$/, "")}/rest/v1/rpc/check_and_increment_usage_limit`,
+      {
+        method: "POST",
+        headers: {
+          apikey: supabaseKey,
+          Authorization: `Bearer ${supabaseKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          p_identity_type: "anon",
+          p_identity_key: `transcribe:anon:${guestId}`,
+          p_daily_limit: limit,
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      return buildFallbackDecision(guestId, limit);
+    }
+
+    const payload = (await response.json()) as
+      | Record<string, unknown>
+      | Array<Record<string, unknown>>;
+    const row = Array.isArray(payload) ? payload[0] : payload;
+    if (!row || typeof row !== "object") {
+      return buildFallbackDecision(guestId, limit);
+    }
+
+    return {
+      allowed: row.allowed === true,
+      limit,
+      remaining:
+        typeof row.remaining === "number"
+          ? Math.max(Math.trunc(row.remaining), 0)
+          : Math.max(limit - 1, 0),
+      resetAt: typeof row.reset_at === "string" ? row.reset_at : null,
+    };
+  } catch {
+    return buildFallbackDecision(guestId, limit);
+  }
+}
+
+async function checkTranscribeRateLimit(request: NextRequest): Promise<{
+  decision: RateLimitDecision;
+  cookieValueToSet: string | null;
+}> {
+  const rawCookie = request.cookies.get(GUEST_COOKIE_NAME)?.value;
+  const verifiedGuestId = verifySignedGuestId(rawCookie);
+
+  const guestId = verifiedGuestId ?? crypto.randomUUID().replaceAll("-", "");
+  const cookieValueToSet = verifiedGuestId ? null : `${guestId}.${signGuestId(guestId)}`;
+  const decision = await callSupabaseUsageRpc(guestId, dailyLimit());
+
+  return { decision, cookieValueToSet };
+}
+
+export async function POST(request: NextRequest) {
   const apiKey = process.env.ELEVENLABS_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
@@ -16,6 +158,34 @@ export async function POST(request: Request) {
       },
       { status: 500 },
     );
+  }
+
+  const { decision, cookieValueToSet } = await checkTranscribeRateLimit(request);
+  if (!decision.allowed) {
+    const limited = NextResponse.json(
+      {
+        detail: {
+          code: "rate_limit_exceeded",
+          message: "You've reached free limit for voice transcription.",
+          limit: decision.limit,
+          remaining: decision.remaining,
+          reset_at: decision.resetAt,
+        },
+      },
+      { status: 429 },
+    );
+    if (cookieValueToSet) {
+      limited.cookies.set({
+        name: GUEST_COOKIE_NAME,
+        value: cookieValueToSet,
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        maxAge: GUEST_COOKIE_MAX_AGE_SECONDS,
+        path: "/",
+      });
+    }
+    return limited;
   }
 
   const inputForm = await request.formData();
@@ -53,5 +223,17 @@ export async function POST(request: Request) {
         ? data.transcript
         : "";
 
-  return NextResponse.json({ text: text.trim() });
+  const success = NextResponse.json({ text: text.trim() });
+  if (cookieValueToSet) {
+    success.cookies.set({
+      name: GUEST_COOKIE_NAME,
+      value: cookieValueToSet,
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: GUEST_COOKIE_MAX_AGE_SECONDS,
+      path: "/",
+    });
+  }
+  return success;
 }

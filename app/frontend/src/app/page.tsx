@@ -32,11 +32,17 @@ type RateLimitNotice = {
   upgradeRequired: boolean;
 };
 
+type TranscribeLimitNotice = {
+  message: string;
+  resetAt: string | null;
+};
+
 export default function HomePage() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [rateLimitNotice, setRateLimitNotice] = useState<RateLimitNotice | null>(null);
+  const [transcribeLimitNotice, setTranscribeLimitNotice] = useState<TranscribeLimitNotice | null>(null);
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [isDictating, setIsDictating] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -50,6 +56,7 @@ export default function HomePage() {
   const transcriptionAbortRef = useRef<AbortController | null>(null);
 
   const isRateLimited = rateLimitNotice !== null;
+  const isDictationRateLimited = transcribeLimitNotice !== null;
   const hasMessages = messages.length > 0;
   const placeholder = useMemo(
     () =>
@@ -133,6 +140,20 @@ export default function HomePage() {
         signal: controller.signal,
       });
       if (!response.ok) {
+        if (response.status === 429) {
+          let payload: unknown = null;
+          try {
+            payload = (await response.json()) as unknown;
+          } catch {
+            payload = null;
+          }
+          const rateLimitError = parseTranscribeRateLimitError(payload);
+          setTranscribeLimitNotice({
+            message: rateLimitError.message,
+            resetAt: rateLimitError.resetAt,
+          });
+          return;
+        }
         const errorText = await response.text();
         throw new Error(errorText || `Transcription failed with status ${response.status}`);
       }
@@ -177,7 +198,7 @@ export default function HomePage() {
   }
 
   async function startRecording() {
-    if (isLoading || isTranscribing || !isDictationSupported) {
+    if (isLoading || isTranscribing || !isDictationSupported || isDictationRateLimited) {
       return;
     }
 
@@ -318,6 +339,13 @@ export default function HomePage() {
       isDictating={isDictating}
       isTranscribing={isTranscribing}
       isDictationSupported={isDictationSupported}
+      dictationDisabledReason={
+        transcribeLimitNotice
+          ? `${transcribeLimitNotice.message}${
+              transcribeLimitNotice.resetAt ? ` (Try again after: ${transcribeLimitNotice.resetAt})` : ""
+            }`
+          : null
+      }
       isLoading={isLoading || isRateLimited}
       onToggleDictation={toggleDictation}
       showSuggestions={showSuggestions}
@@ -416,6 +444,11 @@ type RateLimitErrorPayload = {
   upgradeRequired: boolean;
 };
 
+type TranscribeRateLimitErrorPayload = {
+  message: string;
+  resetAt: string | null;
+};
+
 function parseRateLimitError(payload: unknown): RateLimitErrorPayload {
   const detail =
     payload && typeof payload === "object" && "detail" in payload
@@ -435,6 +468,26 @@ function parseRateLimitError(payload: unknown): RateLimitErrorPayload {
         : "Free limit reached (2/day). Sign in or sign up to continue.",
     resetAt: typeof resetAtFromApi === "string" ? formatResetAt(resetAtFromApi) : null,
     upgradeRequired: upgradeRequiredFromApi === true,
+  };
+}
+
+function parseTranscribeRateLimitError(payload: unknown): TranscribeRateLimitErrorPayload {
+  const detail =
+    payload && typeof payload === "object" && "detail" in payload
+      ? (payload as { detail?: unknown }).detail
+      : payload;
+
+  const detailObject =
+    detail && typeof detail === "object" ? (detail as Record<string, unknown>) : {};
+  const messageFromApi = detailObject.message;
+  const resetAtFromApi = detailObject.reset_at;
+
+  return {
+    message:
+      typeof messageFromApi === "string" && messageFromApi.trim().length > 0
+        ? messageFromApi
+        : "You've reached free limit for voice transcription.",
+    resetAt: typeof resetAtFromApi === "string" ? formatResetAt(resetAtFromApi) : null,
   };
 }
 

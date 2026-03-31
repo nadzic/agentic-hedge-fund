@@ -34,10 +34,7 @@ begin
   values (p_identity_type, p_identity_key, v_window_start, 1)
   on conflict (identity_type, identity_key, window_start)
   do update
-    set usage_count = case
-      when public.usage_limits.usage_count < p_daily_limit then public.usage_limits.usage_count + 1
-      else public.usage_limits.usage_count
-    end,
+    set usage_count = public.usage_limits.usage_count + 1,
     updated_at = timezone('utc', now())
   returning usage_count into v_count;
 

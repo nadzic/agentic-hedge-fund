@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import os
+import threading
 import uuid
 from dataclasses import dataclass
 from datetime import datetime
@@ -16,6 +17,8 @@ IdentityType = Literal["anon", "user"]
 GUEST_COOKIE_NAME = "veritake_guest_id"
 GUEST_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365
 DEFAULT_COOKIE_SECRET = "dev-change-me"
+_FALLBACK_COUNTER_LOCK = threading.Lock()
+_FALLBACK_DAILY_COUNTER: dict[tuple[IdentityType, str, str], int] = {}
 
 
 @dataclass(frozen=True)
@@ -26,6 +29,7 @@ class RateLimitDecision:
   remaining: int
   reset_at: str | None
   upgrade_required: bool
+  guest_cookie_value: str | None
 
 
 def _get_env(*names: str) -> str:
@@ -114,27 +118,20 @@ def _resolve_authenticated_user_id(access_token: str) -> str | None:
   return None
 
 
-def _resolve_identity(request: Request, response: Response) -> tuple[IdentityType, str]:
+def _resolve_identity(request: Request) -> tuple[IdentityType, str, str | None]:
   access_token = _extract_bearer_token(request)
   if access_token:
     user_id = _resolve_authenticated_user_id(access_token)
     if user_id:
-      return "user", user_id
+      return "user", user_id, None
 
   signed_guest_id = request.cookies.get(GUEST_COOKIE_NAME)
   verified_guest_id = _verify_signed_guest_id(signed_guest_id)
   if verified_guest_id:
-    return "anon", verified_guest_id
+    return "anon", verified_guest_id, None
 
   guest_id, signed_value = _new_guest_cookie_value()
-  response.set_cookie(
-    key=GUEST_COOKIE_NAME,
-    value=signed_value,
-    max_age=GUEST_COOKIE_MAX_AGE_SECONDS,
-    httponly=True,
-    samesite="lax",
-  )
-  return "anon", guest_id
+  return "anon", guest_id, signed_value
 
 
 def _daily_limit_for(identity_type: IdentityType) -> int:
@@ -156,6 +153,28 @@ def _safe_int(value: object, fallback: int) -> int:
     except ValueError:
       return fallback
   return fallback
+
+
+def _fallback_daily_decision(identity_type: IdentityType, identity_key: str, limit: int) -> RateLimitDecision:
+  utc_day = datetime.utcnow().date().isoformat()
+  counter_key = (identity_type, identity_key, utc_day)
+
+  with _FALLBACK_COUNTER_LOCK:
+    current_count = _FALLBACK_DAILY_COUNTER.get(counter_key, 0)
+    next_count = current_count + 1
+    _FALLBACK_DAILY_COUNTER[counter_key] = next_count
+
+  allowed = next_count <= limit
+  remaining = max(limit - next_count, 0)
+  return RateLimitDecision(
+    allowed=allowed,
+    identity_type=identity_type,
+    limit=limit,
+    remaining=remaining,
+    reset_at=None,
+    upgrade_required=(identity_type == "anon"),
+    guest_cookie_value=None,
+  )
 
 
 def _call_supabase_usage_rpc(
@@ -205,7 +224,7 @@ def _call_supabase_usage_rpc(
 
 
 def check_analyze_rate_limit(request: Request, response: Response) -> RateLimitDecision:
-  identity_type, identity_key = _resolve_identity(request, response)
+  identity_type, identity_key, guest_cookie_value = _resolve_identity(request)
   limit = _daily_limit_for(identity_type)
 
   try:
@@ -225,13 +244,16 @@ def check_analyze_rate_limit(request: Request, response: Response) -> RateLimitD
       remaining=max(remaining, 0),
       reset_at=reset_at,
       upgrade_required=(identity_type == "anon"),
+      guest_cookie_value=guest_cookie_value,
     )
   except Exception:
+    fallback_decision = _fallback_daily_decision(identity_type, identity_key, limit)
     return RateLimitDecision(
-      allowed=True,
-      identity_type=identity_type,
-      limit=limit,
-      remaining=limit,
-      reset_at=None,
-      upgrade_required=False,
+      allowed=fallback_decision.allowed,
+      identity_type=fallback_decision.identity_type,
+      limit=fallback_decision.limit,
+      remaining=fallback_decision.remaining,
+      reset_at=fallback_decision.reset_at,
+      upgrade_required=fallback_decision.upgrade_required,
+      guest_cookie_value=guest_cookie_value,
     )
