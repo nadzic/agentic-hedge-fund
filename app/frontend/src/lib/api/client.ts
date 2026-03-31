@@ -1,6 +1,6 @@
 import { createClient as createSupabaseClient } from "@/lib/supabase/client";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
 
 export class ApiError extends Error {
   status: number;
@@ -25,12 +25,21 @@ async function getAccessToken(): Promise<string | null> {
   }
 }
 
-export async function apiPost<TResponse>(path: string, payload: unknown): Promise<TResponse> {
+type ApiPostOptions = {
+  signal?: AbortSignal;
+};
+
+export async function apiPost<TResponse>(
+  path: string,
+  payload: unknown,
+  options?: ApiPostOptions,
+): Promise<TResponse> {
   const accessToken = await getAccessToken();
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
     credentials: "include",
+    signal: options?.signal,
     headers: {
       "Content-Type": "application/json",
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),

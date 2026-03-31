@@ -12,6 +12,9 @@ const GUEST_COOKIE_NAME = "veritake_guest_id";
 const GUEST_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 const DEFAULT_COOKIE_SECRET = "dev-change-me";
 const DEFAULT_TRANSCRIBE_DAILY_LIMIT = 2;
+const ELEVENLABS_TRANSCRIBE_URL = "https://api.elevenlabs.io/v1/speech-to-text";
+const ELEVENLABS_MODEL_ID = "scribe_v1";
+const ELEVENLABS_LANGUAGE_CODE = "sl";
 
 const fallbackDailyCounter = new Map<string, number>();
 
@@ -21,6 +24,18 @@ type RateLimitDecision = {
   remaining: number;
   resetAt: string | null;
 };
+
+function setGuestCookie(response: NextResponse, cookieValue: string): void {
+  response.cookies.set({
+    name: GUEST_COOKIE_NAME,
+    value: cookieValue,
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: GUEST_COOKIE_MAX_AGE_SECONDS,
+    path: "/",
+  });
+}
 
 function getEnv(...names: string[]): string {
   for (const name of names) {
@@ -175,15 +190,7 @@ export async function POST(request: NextRequest) {
       { status: 429 },
     );
     if (cookieValueToSet) {
-      limited.cookies.set({
-        name: GUEST_COOKIE_NAME,
-        value: cookieValueToSet,
-        httpOnly: true,
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
-        maxAge: GUEST_COOKIE_MAX_AGE_SECONDS,
-        path: "/",
-      });
+      setGuestCookie(limited, cookieValueToSet);
     }
     return limited;
   }
@@ -196,10 +203,10 @@ export async function POST(request: NextRequest) {
 
   const elevenForm = new FormData();
   elevenForm.append("file", audio, audio.name || "dictation.webm");
-  elevenForm.append("model_id", "scribe_v1");
-  elevenForm.append("language_code", "sl");
+  elevenForm.append("model_id", ELEVENLABS_MODEL_ID);
+  elevenForm.append("language_code", ELEVENLABS_LANGUAGE_CODE);
 
-  const elevenResponse = await fetch("https://api.elevenlabs.io/v1/speech-to-text", {
+  const elevenResponse = await fetch(ELEVENLABS_TRANSCRIBE_URL, {
     method: "POST",
     headers: {
       "xi-api-key": apiKey,
@@ -225,15 +232,7 @@ export async function POST(request: NextRequest) {
 
   const success = NextResponse.json({ text: text.trim() });
   if (cookieValueToSet) {
-    success.cookies.set({
-      name: GUEST_COOKIE_NAME,
-      value: cookieValueToSet,
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      maxAge: GUEST_COOKIE_MAX_AGE_SECONDS,
-      path: "/",
-    });
+    setGuestCookie(success, cookieValueToSet);
   }
   return success;
 }

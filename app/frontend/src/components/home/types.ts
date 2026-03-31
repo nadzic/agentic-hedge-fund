@@ -22,3 +22,14 @@ export type ModelInfoResponse = {
 };
 
 export type Horizon = "intraday" | "swing" | "position";
+
+export type RateLimitErrorPayload = {
+  message: string;
+  resetAt: string | null;
+  upgradeRequired: boolean;
+};
+
+export type TranscribeRateLimitErrorPayload = {
+  message: string;
+  resetAt: string | null;
+};

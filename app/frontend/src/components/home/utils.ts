@@ -1,5 +1,10 @@
 import { SUGGESTED_PROMPTS } from "@/components/home/constants";
-import { AnalyzeResponse, Horizon } from "@/components/home/types";
+import {
+  AnalyzeResponse,
+  Horizon,
+  RateLimitErrorPayload,
+  TranscribeRateLimitErrorPayload,
+} from "@/components/home/types";
 
 export function inferSymbol(query: string): string | null {
   const candidates = query.match(/\b[A-Z]{1,5}\b/g);
@@ -108,4 +113,54 @@ export function getAnalyzeErrorMessage(error: unknown, timeoutMs: number): strin
     return error.message;
   }
   return "Unknown error";
+}
+
+function formatResetAt(value: string): string {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  return parsed.toLocaleString();
+}
+
+export function parseRateLimitError(payload: unknown): RateLimitErrorPayload {
+  const detail =
+    payload && typeof payload === "object" && "detail" in payload
+      ? (payload as { detail?: unknown }).detail
+      : payload;
+
+  const detailObject =
+    detail && typeof detail === "object" ? (detail as Record<string, unknown>) : {};
+  const messageFromApi = detailObject.message;
+  const resetAtFromApi = detailObject.reset_at;
+  const upgradeRequiredFromApi = detailObject.upgrade_required;
+
+  return {
+    message:
+      typeof messageFromApi === "string" && messageFromApi.trim().length > 0
+        ? messageFromApi
+        : "Free limit reached (2/day). Sign in or sign up to continue.",
+    resetAt: typeof resetAtFromApi === "string" ? formatResetAt(resetAtFromApi) : null,
+    upgradeRequired: upgradeRequiredFromApi === true,
+  };
+}
+
+export function parseTranscribeRateLimitError(payload: unknown): TranscribeRateLimitErrorPayload {
+  const detail =
+    payload && typeof payload === "object" && "detail" in payload
+      ? (payload as { detail?: unknown }).detail
+      : payload;
+
+  const detailObject =
+    detail && typeof detail === "object" ? (detail as Record<string, unknown>) : {};
+  const messageFromApi = detailObject.message;
+  const resetAtFromApi = detailObject.reset_at;
+
+  return {
+    message:
+      typeof messageFromApi === "string" && messageFromApi.trim().length > 0
+        ? messageFromApi
+        : "You've reached free limit for voice transcription.",
+    resetAt: typeof resetAtFromApi === "string" ? formatResetAt(resetAtFromApi) : null,
+  };
 }
