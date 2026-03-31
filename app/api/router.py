@@ -11,5 +11,6 @@ api_router = APIRouter()
 api_router.include_router(health_router, tags=["health"])
 api_router.include_router(meta_router, prefix="/meta", tags=["meta"])
 api_router.include_router(analyze_router, prefix="/signals", tags=["analyze"])
+# RAG endpoints -- there should be as well protected endpoints for ingestion
 api_router.include_router(rag_ingest_router, prefix="/rag", tags=["ingest-index"])
 api_router.include_router(rag_query_router, prefix="/rag", tags=["query"])
