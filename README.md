@@ -212,11 +212,12 @@ CI checks on push to `main`:
 
 ## TODOs
 
-- jobs, workers, queues for ingestion and indexing
-- fallback models
-- try out smaller models for classification and routing and just bigger models for final generation
-- fallback when api fails, default safe response
-- llm provider orchestration to easy replace models 
+- Implement jobs, workers, and queues for data ingestion and indexing
+- Add fallback models
+- Experiment with using smaller models for classification and routing, and reserve larger models for final generation
+- Provide a default safe response when API calls fail
+- Improve LLM provider orchestration to easily swap models
+- Security: Implement rate limiting for both unauthenticated and authenticated users
 
 ## Disclaimer
 
