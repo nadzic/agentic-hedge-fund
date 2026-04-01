@@ -12,6 +12,27 @@ type AuthPanelProps = {
   variant: AuthVariant;
 };
 
+function resolveAuthRedirectBase(): string {
+  const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (configuredSiteUrl) {
+    try {
+      const configuredUrl = new URL(configuredSiteUrl);
+      return `${configuredUrl.protocol}//${configuredUrl.host}`;
+    } catch {
+      // Ignore invalid configured site URL and fall back to window location.
+    }
+  }
+
+  const { protocol, hostname, port } = window.location;
+  const isLocalHost =
+    hostname === "localhost" || hostname === "127.0.0.1" || hostname === "0.0.0.0";
+  const resolvedHostname = hostname === "0.0.0.0" ? "localhost" : hostname;
+  const resolvedProtocol = isLocalHost ? "http:" : protocol;
+  const resolvedPort = port ? `:${port}` : "";
+
+  return `${resolvedProtocol}//${resolvedHostname}${resolvedPort}`;
+}
+
 const panelContent = {
   "sign-in": {
     title: "Log into your account",
@@ -56,7 +77,7 @@ export function AuthPanel({ variant }: AuthPanelProps) {
       setAuthAction(null);
       return;
     }
-    const redirectTo = `${window.location.origin}/auth/callback?next=/`;
+    const redirectTo = `${resolveAuthRedirectBase()}/auth/callback?next=/`;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo },
@@ -100,7 +121,7 @@ export function AuthPanel({ variant }: AuthPanelProps) {
       return;
     }
 
-    const emailRedirectTo = `${window.location.origin}/auth/callback?next=/`;
+    const emailRedirectTo = `${resolveAuthRedirectBase()}/auth/callback?next=/`;
     let supabase;
     try {
       supabase = createClient();
