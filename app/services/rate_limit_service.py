@@ -155,7 +155,11 @@ def _safe_int(value: object, fallback: int) -> int:
   return fallback
 
 
-def _fallback_daily_decision(identity_type: IdentityType, identity_key: str, limit: int) -> RateLimitDecision:
+def _fallback_daily_decision(
+  identity_type: IdentityType,
+  identity_key: str,
+  limit: int,
+) -> RateLimitDecision:
   utc_day = datetime.utcnow().date().isoformat()
   counter_key = (identity_type, identity_key, utc_day)
 

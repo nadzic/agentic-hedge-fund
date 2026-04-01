@@ -40,7 +40,9 @@ export default function HomePage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [rateLimitNotice, setRateLimitNotice] = useState<RateLimitNotice | null>(null);
-  const [transcribeLimitNotice, setTranscribeLimitNotice] = useState<TranscribeLimitNotice | null>(null);
+  const [transcribeLimitNotice, setTranscribeLimitNotice] = useState<TranscribeLimitNotice | null>(
+    null,
+  );
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [isDictating, setIsDictating] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -277,11 +279,15 @@ export default function HomePage() {
     try {
       const symbol = inferSymbol(query);
       const horizon = inferHorizon(query);
-      const data = await apiPost<AnalyzeResponse>("/signals/analyze", {
-        query,
-        symbol,
-        horizon,
-      }, { signal: abortController.signal });
+      const data = await apiPost<AnalyzeResponse>(
+        "/signals/analyze",
+        {
+          query,
+          symbol,
+          horizon,
+        },
+        { signal: abortController.signal },
+      );
       setMessages((prev) => [
         ...prev,
         {
@@ -340,7 +346,9 @@ export default function HomePage() {
       dictationDisabledReason={
         transcribeLimitNotice
           ? `${transcribeLimitNotice.message}${
-              transcribeLimitNotice.resetAt ? ` (Try again after: ${transcribeLimitNotice.resetAt})` : ""
+              transcribeLimitNotice.resetAt
+                ? ` (Try again after: ${transcribeLimitNotice.resetAt})`
+                : ""
             }`
           : null
       }

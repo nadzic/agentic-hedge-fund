@@ -57,7 +57,12 @@ export function Composer({
             <button
               type="button"
               onClick={onToggleDictation}
-              disabled={isLoading || isTranscribing || !isDictationSupported || Boolean(dictationDisabledReason)}
+              disabled={
+                isLoading ||
+                isTranscribing ||
+                !isDictationSupported ||
+                Boolean(dictationDisabledReason)
+              }
               title={
                 dictationDisabledReason ??
                 (isTranscribing ? "Transcribing..." : isDictating ? "Stop dictation" : "Dictation")
