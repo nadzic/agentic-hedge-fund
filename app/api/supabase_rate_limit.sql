@@ -19,6 +19,7 @@ returns table (
   reset_at timestamptz,
   current_count integer
 )
+
 language plpgsql
 security definer
 as $$
