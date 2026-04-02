@@ -10,9 +10,11 @@ This project uses a layered Python test strategy so regressions are caught early
 
 ## Directory layout
 
-- `tests/unit`
-- `tests/integration`
-- `tests/e2e`
+- `tests/api/unit`
+- `tests/api/integration`
+- `tests/api/e2e`
+- `tests/agents/unit` (agent services/helpers)
+- `tests/agents/integration` (agent graph/workflow boundaries, as needed)
 
 ## Markers
 

@@ -8,6 +8,10 @@ from langfuse.langchain import CallbackHandler
 
 _ = load_dotenv()
 _langfuse_callback_handler: CallbackHandler | None = None
+_PROVIDER_KEY_MAP = {
+    "openai": "OPENAI_API_KEY",
+    "anthropic": "ANTHROPIC_API_KEY",
+}
 
 
 def _tracing_enabled() -> bool:
@@ -24,14 +28,18 @@ def _get_langfuse_callbacks() -> list[Any]:
     return [_langfuse_callback_handler]
 
 
+def _normalized_provider() -> str:
+    return os.getenv("LLM_PROVIDER", "openai").strip().lower()
+
+
+def _required_api_key_env(provider: str) -> str | None:
+    return _PROVIDER_KEY_MAP.get(provider)
+
+
 def get_llm() -> BaseChatModel:
-    model_name = os.getenv("LLM_MODEL_NAME", "gpt-4o-mini")
-    provider = os.getenv("LLM_PROVIDER", "openai")  # openai | anthropic | ...
-    provider_key_map = {
-        "openai": "OPENAI_API_KEY",
-        "anthropic": "ANTHROPIC_API_KEY",
-    }
-    env_key = provider_key_map.get(provider)
+    model_name = os.getenv("LLM_MODEL_NAME", "gpt-4o-mini").strip()
+    provider = _normalized_provider()  # openai | anthropic | ...
+    env_key = _required_api_key_env(provider)
     if env_key and not os.getenv(env_key):
         raise OSError(f"{env_key} is not set in environment/.env")
 
