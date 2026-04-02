@@ -9,14 +9,37 @@ function sanitizeNextPath(next: string | null): string {
   return next;
 }
 
+function buildRedirectUrl(request: NextRequest, path: string, error?: string): URL {
+  const url = new URL(path, request.url);
+  if (error) {
+    url.searchParams.set("error", error);
+  }
+  return url;
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
   const nextPath = sanitizeNextPath(searchParams.get("next"));
 
-  if (code) {
+  if (!code) {
+    return NextResponse.redirect(
+      buildRedirectUrl(request, "/sign-in", "missing_auth_code"),
+    );
+  }
+
+  try {
     const supabase = await createClient();
-    await supabase.auth.exchangeCodeForSession(code);
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) {
+      return NextResponse.redirect(
+        buildRedirectUrl(request, "/sign-in", "auth_callback_failed"),
+      );
+    }
+  } catch {
+    return NextResponse.redirect(
+      buildRedirectUrl(request, "/sign-in", "auth_callback_failed"),
+    );
   }
 
   // Relative redirect avoids leaking internal/proxy hosts (e.g. 0.0.0.0) into Location.

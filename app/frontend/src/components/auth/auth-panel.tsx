@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 import { createClient } from "@/lib/supabase/client";
 
@@ -11,6 +11,19 @@ type AuthVariant = "sign-in" | "sign-up";
 type AuthPanelProps = {
   variant: AuthVariant;
 };
+
+function getAuthErrorMessage(errorCode: string | null): string | null {
+  if (!errorCode) return null;
+
+  switch (errorCode) {
+    case "missing_auth_code":
+      return "Authentication could not be completed. Please try again.";
+    case "auth_callback_failed":
+      return "Sign-in failed during callback. Please try again.";
+    default:
+      return "Authentication failed. Please try again.";
+  }
+}
 
 function resolveAuthRedirectBase(): string {
   const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
@@ -62,6 +75,14 @@ export function AuthPanel({ variant }: AuthPanelProps) {
   const [isBusy, setIsBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [authAction, setAuthAction] = useState<"google" | "email" | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const authError = getAuthErrorMessage(params.get("error"));
+    if (authError) {
+      setMessage(authError);
+    }
+  }, []);
 
   async function handleGoogleAuth() {
     setIsBusy(true);

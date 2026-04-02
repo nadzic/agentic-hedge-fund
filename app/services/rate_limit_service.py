@@ -94,15 +94,21 @@ def _extract_bearer_token(request: Request) -> str | None:
 
 def _resolve_authenticated_user_id(access_token: str) -> str | None:
   supabase_url = _get_env("SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL")
-  supabase_anon_key = _get_env("SUPABASE_ANON_KEY", "NEXT_PUBLIC_SUPABASE_ANON_KEY")
-  if not supabase_url or not supabase_anon_key:
+  # Prefer anon key for user lookup, but allow service-role fallback on server runtimes
+  # where anon env can be missing.
+  supabase_api_key = _get_env(
+    "SUPABASE_ANON_KEY",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY",
+  )
+  if not supabase_url or not supabase_api_key:
     return None
 
   try:
     response = httpx.get(
       f"{supabase_url.rstrip('/')}/auth/v1/user",
       headers={
-        "apikey": supabase_anon_key,
+        "apikey": supabase_api_key,
         "Authorization": f"Bearer {access_token}",
       },
       timeout=5.0,
@@ -193,12 +199,8 @@ def _call_supabase_usage_rpc(
     "NEXT_PUBLIC_SUPABASE_ANON_KEY",
   )
   if not supabase_url or not supabase_key:
-    return {
-      "allowed": True,
-      "limit_value": limit,
-      "remaining": limit,
-      "reset_at": None,
-    }
+    # Force deterministic local fallback limiter when Supabase env is missing.
+    raise RuntimeError("Missing Supabase configuration for usage RPC")
 
   response = httpx.post(
     f"{supabase_url.rstrip('/')}/rest/v1/rpc/check_and_increment_usage_limit",
