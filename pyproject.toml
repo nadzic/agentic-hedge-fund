@@ -49,6 +49,7 @@ dependencies = [
 dev = [
     "pytest",
     "pytest-asyncio",
+    "pytest-cov",
     "ruff",
     "basedpyright",
     "ipykernel",
@@ -64,3 +65,9 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+addopts = "--strict-markers --cov=app.main --cov=app.api.router --cov=app.api.routes.meta --cov=app.api.routes.analyze --cov-report=term-missing --cov-fail-under=85"
+markers = [
+    "unit: Fast isolated unit tests",
+    "integration: Tests across route/service boundaries with mocks",
+    "e2e: End-to-end API smoke tests through ASGI app",
+]
