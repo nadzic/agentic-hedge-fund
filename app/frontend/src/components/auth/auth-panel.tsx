@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useState } from "react";
 
 import { createClient } from "@/lib/supabase/client";
 
@@ -73,16 +73,14 @@ export function AuthPanel({ variant }: AuthPanelProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isBusy, setIsBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [authAction, setAuthAction] = useState<"google" | "email" | null>(null);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const authError = getAuthErrorMessage(params.get("error"));
-    if (authError) {
-      setMessage(authError);
+  const [message, setMessage] = useState<string | null>(() => {
+    if (typeof window === "undefined") {
+      return null;
     }
-  }, []);
+    const params = new URLSearchParams(window.location.search);
+    return getAuthErrorMessage(params.get("error"));
+  });
+  const [authAction, setAuthAction] = useState<"google" | "email" | null>(null);
 
   async function handleGoogleAuth() {
     setIsBusy(true);

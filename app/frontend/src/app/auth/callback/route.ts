@@ -23,23 +23,17 @@ export async function GET(request: NextRequest) {
   const nextPath = sanitizeNextPath(searchParams.get("next"));
 
   if (!code) {
-    return NextResponse.redirect(
-      buildRedirectUrl(request, "/sign-in", "missing_auth_code"),
-    );
+    return NextResponse.redirect(buildRedirectUrl(request, "/sign-in", "missing_auth_code"));
   }
 
   try {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) {
-      return NextResponse.redirect(
-        buildRedirectUrl(request, "/sign-in", "auth_callback_failed"),
-      );
+      return NextResponse.redirect(buildRedirectUrl(request, "/sign-in", "auth_callback_failed"));
     }
   } catch {
-    return NextResponse.redirect(
-      buildRedirectUrl(request, "/sign-in", "auth_callback_failed"),
-    );
+    return NextResponse.redirect(buildRedirectUrl(request, "/sign-in", "auth_callback_failed"));
   }
 
   // Relative redirect avoids leaking internal/proxy hosts (e.g. 0.0.0.0) into Location.
