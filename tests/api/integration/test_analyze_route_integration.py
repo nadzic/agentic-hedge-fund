@@ -2,6 +2,7 @@ import pytest
 from httpx import AsyncClient
 
 from app.agents.graph.schemas import Signal, SuggestionOutput
+from app.agents.graph.state import HedgeFundState
 from app.api.schemas.signal import SignalResponse
 from app.services.rate_limit_service import GUEST_COOKIE_NAME, RateLimitDecision
 
@@ -119,10 +120,10 @@ async def test_analyze_runs_through_signal_service_and_graph_runner(
     from app.api.routes import analyze as analyze_route
     from app.services import signal_service
 
-    captured_state: dict[str, object] = {}
+    captured_state: dict[str, HedgeFundState] = {}
 
     class FakeGraphRunner:
-        def invoke(self, state):  # type: ignore[no-untyped-def]
+        def invoke(self, state: HedgeFundState) -> HedgeFundState:
             captured_state["state"] = state
             return {
                 **state,

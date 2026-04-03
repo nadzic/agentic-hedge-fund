@@ -46,7 +46,10 @@ def test_generation_expected_contract() -> None:
         expected = case["expected_generation"]
         assert isinstance(expected["must_mention_any"], list)
         assert expected["must_mention_any"]
-        assert all(isinstance(value, str) and value.strip() for value in expected["must_mention_any"])
+        assert all(
+            isinstance(value, str) and value.strip()
+            for value in expected["must_mention_any"]
+        )
 
         assert isinstance(expected["must_not_mention_any"], list)
         assert all(isinstance(value, str) for value in expected["must_not_mention_any"])
