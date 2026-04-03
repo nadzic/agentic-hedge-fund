@@ -1,13 +1,16 @@
 # Agentic Hedge Fund
 
 [![CI](https://github.com/nadzic/agentic-hedge-fund/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/nadzic/agentic-hedge-fund/actions/workflows/ci.yml)
-![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)
+[![Live App](https://img.shields.io/badge/Live%20App-veritake.ai-2563EB?logo=googlechrome&logoColor=white)](https://veritake.ai)
+![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
-![Next.js](https://img.shields.io/badge/Next.js-000000?logo=next.js&logoColor=white)
-![LangGraph](https://img.shields.io/badge/LangGraph-agent%20orchestration-1C3C3C)
-![Qdrant](https://img.shields.io/badge/Qdrant-vector%20search-DC244C)
+![Next.js 16](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)
+![LangGraph](https://img.shields.io/badge/LangGraph-agent%20orchestration-1C3C3C?logo=langchain&logoColor=white)
+![Qdrant](https://img.shields.io/badge/Qdrant-vector%20search-DC244C?logo=qdrant&logoColor=white)
 
 An AI-native, multi-agent research assistant for stock trade ideas.
+
+Hosted app: [https://veritake.ai](https://veritake.ai)
 
 The project turns one user prompt into a structured signal by combining:
 - analyst-specialized agents,
