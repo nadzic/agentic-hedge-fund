@@ -1,6 +1,7 @@
 import pytest
 from httpx import AsyncClient
 
+from app.agents.graph.schemas import Signal, SuggestionOutput
 from app.api.schemas.signal import SignalResponse
 from app.services.rate_limit_service import GUEST_COOKIE_NAME, RateLimitDecision
 
@@ -107,3 +108,52 @@ async def test_analyze_maps_timeouts_to_504(
 
     assert response.status_code == 504
     assert "timed out" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_analyze_runs_through_signal_service_and_graph_runner(
+    async_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.api.routes import analyze as analyze_route
+    from app.services import signal_service
+
+    captured_state: dict[str, object] = {}
+
+    class FakeGraphRunner:
+        def invoke(self, state):  # type: ignore[no-untyped-def]
+            captured_state["state"] = state
+            return {
+                **state,
+                "suggestion": SuggestionOutput(
+                    symbol="AAPL",
+                    signal=Signal.BUY,
+                    confidence=0.86,
+                    reasoning="Graph runner integration path executed.",
+                    suggested_position_pct=0.08,
+                    stop_loss_pct=0.03,
+                    take_profit_pct=0.08,
+                ),
+                "warning": None,
+                "error": None,
+            }
+
+    monkeypatch.setattr(
+        analyze_route,
+        "check_analyze_rate_limit",
+        lambda request, response: _allowed_decision(),
+    )
+    monkeypatch.setattr(signal_service, "build_graph", lambda: FakeGraphRunner())
+    monkeypatch.setattr(analyze_route, "run_signal_sync", signal_service.run_signal_sync)
+
+    response = await async_client.post(
+        "/api/v1/signals/analyze",
+        json={"query": "Please analyze AAPL for swing setup", "symbol": "AAPL", "horizon": "swing"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["symbol"] == "AAPL"
+    assert response.json()["signal"] == "buy"
+    assert captured_state["state"]["input"].symbol == "AAPL"
+    assert captured_state["state"]["input"].horizon == "swing"

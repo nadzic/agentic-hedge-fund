@@ -66,6 +66,19 @@ run_frontend_checks() {
   log_step "Frontend: lint"
   (cd "${FRONTEND_DIR}" && npm run lint)
 
+  log_step "Frontend: typecheck"
+  (cd "${FRONTEND_DIR}" && npm run typecheck)
+
+  log_step "Frontend: next build"
+  (
+    cd "${FRONTEND_DIR}" && \
+    NEXT_PUBLIC_API_URL="http://localhost:8000/api/v1" \
+    NEXT_PUBLIC_SITE_URL="http://localhost:3000" \
+    NEXT_PUBLIC_SUPABASE_URL="https://example.supabase.co" \
+    NEXT_PUBLIC_SUPABASE_ANON_KEY="sb_publishable_ci_dummy_key" \
+    npm run build
+  )
+
   log_step "Frontend: format check"
   (cd "${FRONTEND_DIR}" && npm run format:check)
 
