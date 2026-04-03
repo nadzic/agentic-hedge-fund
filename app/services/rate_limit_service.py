@@ -67,20 +67,6 @@ def _new_guest_cookie_value() -> tuple[str, str]:
   return guest_id, _sign_guest_id(guest_id)
 
 
-def _client_ip(request: Request) -> str:
-  forwarded_for = request.headers.get("x-forwarded-for", "")
-  if forwarded_for:
-    return forwarded_for.split(",")[0].strip()
-  return request.client.host if request.client else "unknown"
-
-
-def _anon_fallback_identity(request: Request) -> str:
-  ip = _client_ip(request)
-  user_agent = request.headers.get("user-agent", "unknown")
-  raw = f"{ip}:{user_agent}"
-  return hashlib.sha256(raw.encode("utf-8")).hexdigest()
-
-
 def _extract_bearer_token(request: Request) -> str | None:
   auth_header = request.headers.get("authorization")
   if not auth_header:

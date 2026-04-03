@@ -4,7 +4,7 @@ from app.agents.services import llm
 
 
 @pytest.fixture(autouse=True)
-def _reset_langfuse_handler() -> None:
+def reset_langfuse_handler_fixture() -> None:
     llm._langfuse_callback_handler = None
 
 
