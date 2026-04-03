@@ -36,6 +36,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(buildRedirectUrl(request, "/sign-in", "auth_callback_failed"));
   }
 
-  // Relative redirect avoids leaking internal/proxy hosts (e.g. 0.0.0.0) into Location.
-  return NextResponse.redirect(nextPath);
+  // Build an absolute URL from the current request host for Next.js proxy compatibility.
+  return NextResponse.redirect(buildRedirectUrl(request, nextPath));
 }
