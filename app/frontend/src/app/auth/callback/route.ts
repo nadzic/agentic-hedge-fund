@@ -9,8 +9,27 @@ function sanitizeNextPath(next: string | null): string {
   return next;
 }
 
+function getPublicOrigin(request: NextRequest): string {
+  const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (configuredSiteUrl) {
+    try {
+      return new URL(configuredSiteUrl).origin;
+    } catch {
+      // Fall through to forwarded headers when the configured URL is invalid.
+    }
+  }
+
+  const forwardedProto = request.headers.get("x-forwarded-proto");
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  if (forwardedProto && forwardedHost) {
+    return `${forwardedProto}://${forwardedHost}`;
+  }
+
+  return request.nextUrl.origin;
+}
+
 function buildRedirectUrl(request: NextRequest, path: string, error?: string): URL {
-  const url = new URL(path, request.url);
+  const url = new URL(path, getPublicOrigin(request));
   if (error) {
     url.searchParams.set("error", error);
   }

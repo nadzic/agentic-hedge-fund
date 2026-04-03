@@ -161,7 +161,7 @@ jobs:
             --platform managed \
             --allow-unauthenticated \
             --set-env-vars "^|^ALLOWED_ORIGINS=${{ vars.ALLOWED_ORIGINS }}|LANGFUSE_BASE_URL=https://cloud.langfuse.com|SUPABASE_URL=${{ vars.NEXT_PUBLIC_SUPABASE_URL }}|SUPABASE_ANON_KEY=${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" \
-            --set-secrets "QDRANT_URL=QDRANT_URL:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest,FINNHUB_API_KEY=FINNHUB_API_KEY:latest,LANGFUSE_PUBLIC_KEY=LANGFUSE_PUBLIC_KEY:latest,LANGFUSE_SECRET_KEY=LANGFUSE_SECRET_KEY:latest"
+            --set-secrets "QDRANT_URL=QDRANT_URL:latest,QDRANT_API_KEY=QDRANT_API_KEY:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest,FINNHUB_API_KEY=FINNHUB_API_KEY:latest,LANGFUSE_PUBLIC_KEY=LANGFUSE_PUBLIC_KEY:latest,LANGFUSE_SECRET_KEY=LANGFUSE_SECRET_KEY:latest,SUPABASE_SERVICE_ROLE_KEY=SUPABASE_SERVICE_ROLE_KEY:latest,RATE_LIMIT_COOKIE_SECRET=RATE_LIMIT_COOKIE_SECRET:latest"
 
       - name: Deploy Frontend to Cloud Run
         run: |
@@ -169,4 +169,6 @@ jobs:
             --image "${FRONTEND_IMAGE}" \
             --region "${REGION}" \
             --platform managed \
-            --allow-unauthenticated
+            --allow-unauthenticated \
+            --set-env-vars "^|^NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}|NEXT_PUBLIC_SITE_URL=${{ vars.NEXT_PUBLIC_SITE_URL }}|NEXT_PUBLIC_SUPABASE_URL=${{ vars.NEXT_PUBLIC_SUPABASE_URL }}|NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}|RATE_LIMIT_ANON_DAILY=2" \
+            --set-secrets "ELEVENLABS_API_KEY=ELEVENLABS_API_KEY:latest,SUPABASE_SERVICE_ROLE_KEY=SUPABASE_SERVICE_ROLE_KEY:latest,RATE_LIMIT_COOKIE_SECRET=RATE_LIMIT_COOKIE_SECRET:latest"
