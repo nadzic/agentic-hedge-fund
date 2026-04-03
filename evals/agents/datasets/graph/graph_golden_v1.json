@@ -1,0 +1,39 @@
+[
+  {
+    "id": "G01",
+    "category": "valid_flow",
+    "input": {
+      "query": "Analyze NVDA for swing trading with key risks and setup.",
+      "symbol": "NVDA",
+      "horizon": "swing"
+    },
+    "expected_route": [
+      "symbol_resolver",
+      "input_classifier",
+      "market_research_agent",
+      "orchestrator",
+      "fundamentals_analyst_node",
+      "technicals_analyst_node",
+      "valuation_analyst_node",
+      "sentiment_analyst_node",
+      "synthesizer",
+      "risk_manager"
+    ],
+    "expected_terminal": "response"
+  },
+  {
+    "id": "G02",
+    "category": "invalid_flow",
+    "input": {
+      "query": "NVDA?",
+      "symbol": "NVDA",
+      "horizon": "swing"
+    },
+    "expected_route": [
+      "symbol_resolver",
+      "input_classifier",
+      "request_clarification"
+    ],
+    "expected_terminal": "response"
+  }
+]

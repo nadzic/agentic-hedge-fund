@@ -1,0 +1,35 @@
+[
+  {
+    "id": "N01",
+    "node": "symbol_resolver",
+    "category": "normal",
+    "input": {
+      "query": "Please analyze NVIDIA for swing trading.",
+      "symbol": "",
+      "horizon": "swing"
+    },
+    "expected_behavior": "Resolves a valid ticker when enough context is present."
+  },
+  {
+    "id": "N02",
+    "node": "input_classifier",
+    "category": "invalid_short_query",
+    "input": {
+      "query": "NVDA?",
+      "symbol": "NVDA",
+      "horizon": "swing"
+    },
+    "expected_behavior": "Marks input as invalid and requests clarification."
+  },
+  {
+    "id": "N03",
+    "node": "risk_manager",
+    "category": "risk_limit_clamp",
+    "input": {
+      "query": "Analyze AAPL for position trade.",
+      "symbol": "AAPL",
+      "horizon": "position"
+    },
+    "expected_behavior": "Clamps position size and applies confidence guardrails."
+  }
+]

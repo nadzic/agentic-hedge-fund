@@ -5,9 +5,29 @@ This folder stores versioned golden datasets and dataset integrity checks for AI
 ## Files
 
 - `datasets/signals_analyze_golden_v1.json`: Golden cases for `POST /api/v1/signals/analyze`.
-- `datasets/rag_query_golden_v1.json`: Golden cases for `POST /api/v1/rag/query`.
 - `test_signals_analyze_eval.py`: Dataset contract checks for analyze golden set.
-- `test_rag_query_eval.py`: Dataset contract checks for RAG golden set.
+- `test_rag_query_eval.py`: Dataset contract checks for RAG query e2e golden set (`evals/rag/datasets/e2e`).
+
+## RAG layered structure
+
+RAG evals are also organized by layer under `evals/rag`:
+
+- `retrieval`: retrieval quality for relevant chunks/documents
+- `generation`: response quality given fixed retrieved context
+- `e2e`: full pipeline quality from user query to final answer
+
+See `evals/rag/README.md` for the full structure and conventions.
+
+## Agents minimal structure
+
+Agent evals are available under `evals/agents` with minimal folders for:
+
+- `datasets` (`nodes`, `graph`, `e2e`)
+- `runners`
+- `metrics`
+- `configs`
+
+See `evals/agents/README.md` for details and next steps.
 
 ## Why this exists
 
@@ -19,6 +39,8 @@ This folder stores versioned golden datasets and dataset integrity checks for AI
 
 ```bash
 uv run pytest -q evals --no-cov
+uv run pytest -q evals/rag --no-cov
+uv run pytest -q evals/agents --no-cov
 ```
 
 ## Next step

@@ -1,0 +1,10 @@
+nodes:
+  min_pass_rate: 0.95
+
+graph:
+  min_route_accuracy: 0.98
+
+e2e:
+  min_pass_rate: 0.90
+  min_safety_pass_rate: 0.98
+  max_p95_latency_ms: 5000
