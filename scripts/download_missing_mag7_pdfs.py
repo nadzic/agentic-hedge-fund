@@ -6,12 +6,27 @@ import os
 import re
 import subprocess
 from pathlib import Path
+from typing import TypedDict
 from urllib.parse import urljoin
+
+
+class CompanyConfig(TypedDict):
+    cik: int
+    sec_slug: str
+    extra_pages: list[str]
+
+
+class RecentFilings(TypedDict):
+    form: list[str]
+    accessionNumber: list[str]
+    primaryDocument: list[str]
+    filingDate: list[str]
+
 
 BASE = Path.home() / "Documents/Repos/agentic-hedge-fund/app/rag/data/raw"
 BASE.mkdir(parents=True, exist_ok=True)
 
-COMPANIES = {
+COMPANIES: dict[str, CompanyConfig] = {
     "meta": {
         "cik": 1326801,
         "sec_slug": "meta",
@@ -89,13 +104,14 @@ def download_pdf(url: str, dest: Path) -> bool:
         return False
 
 
-def sec_recent(cik: int) -> dict:
+def sec_recent(cik: int) -> RecentFilings:
     txt = curl(f"https://data.sec.gov/submissions/CIK{cik:010d}.json")
     return json.loads(txt)["filings"]["recent"]
 
 
 def sec_html_url(cik: int, accession: str, primary_doc: str) -> str:
-    return f"https://www.sec.gov/Archives/edgar/data/{cik}/{accession.replace('-', '')}/{primary_doc}"
+    accession_compact = accession.replace("-", "")
+    return f"https://www.sec.gov/Archives/edgar/data/{cik}/{accession_compact}/{primary_doc}"
 
 
 def print_to_pdf(url: str, out: Path) -> bool:
@@ -173,6 +189,7 @@ def main() -> None:
             recent["accessionNumber"],
             recent["primaryDocument"],
             recent["filingDate"],
+            strict=False,
         ):
             year = date[:4]
             if year not in {"2024", "2025"}:

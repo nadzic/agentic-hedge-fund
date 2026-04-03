@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import os
 import re
 import subprocess
 from pathlib import Path
@@ -99,9 +98,17 @@ def interesting(url: str, year: int, quarter: str) -> bool:
         return False
     if str(year) not in low and f"fy{str(year)[2:]}" not in low:
         return False
-    if quarter not in low and quarter.upper() not in url and quarter.replace('q','quarter-') not in low:
+    quarter_variant = quarter.replace("q", "quarter-")
+    if (
+        quarter not in low
+        and quarter.upper() not in url
+        and quarter_variant not in low
+    ):
         # allow if keyword strong enough
-        if not any(k in low for k in ['earn', 'shareholder', 'presentation', 'results', 'release']):
+        if not any(
+            keyword in low
+            for keyword in ["earn", "shareholder", "presentation", "results", "release"]
+        ):
             return False
     return True
 
