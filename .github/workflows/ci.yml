@@ -6,6 +6,14 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      run_llm_evals:
+        description: Run LLM-based evals
+        required: false
+        default: false
+        type: boolean
+  schedule:
+    - cron: "0 3 * * *"
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -87,10 +95,64 @@ jobs:
       - name: Compile smoke check
         run: uv run python -m compileall app
 
+  quality-check-evals:
+    name: Evals Contract Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup uv + Python
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.11"
+          enable-cache: true
+
+      - name: Sync dependencies
+        run: uv sync --extra dev
+
+      - name: Run evals contract tests
+        run: uv run pytest -q evals/rag/generation/test_generation_dataset_contract_v2.py
+
+  llm-evals:
+    name: LLM Evals (RAG Generation)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.run_llm_evals == true)
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup uv + Python
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.11"
+          enable-cache: true
+
+      - name: Sync dependencies
+        run: uv sync --extra dev
+
+      - name: Ensure OPENAI_API_KEY is available
+        run: |
+          if [ -z "${OPENAI_API_KEY}" ]; then
+            echo "OPENAI_API_KEY is not set. Skipping LLM evals."
+            exit 0
+          fi
+
+      - name: Run LLM eval tests
+        run: |
+          uv run pytest -q \
+            evals/rag/generation/test_generation_faitfulness_deepeval.py \
+            evals/rag/generation/test_generation_relevancy_deepeval.py \
+            evals/rag/generation/test_generation_correctness_custom_deepeval.py
+
   docker:
     name: Docker build
     runs-on: ubuntu-latest
-    needs: [quality-check-python, quality-check-frontend]
+    needs: [quality-check-python, quality-check-frontend, quality-check-evals]
 
     steps:
       - name: Checkout
@@ -102,7 +164,7 @@ jobs:
   deploy-cloud-run:
     name: Build, Push, and Deploy to Cloud Run
     runs-on: ubuntu-latest
-    needs: [quality-check-python, quality-check-frontend]
+    needs: [quality-check-python, quality-check-frontend, quality-check-evals]
     if: github.ref == 'refs/heads/main'
 
     permissions:
