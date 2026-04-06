@@ -71,3 +71,8 @@ markers = [
     "integration: Tests across route/service boundaries with mocks",
     "e2e: End-to-end API smoke tests through ASGI app",
 ]
+
+[dependency-groups]
+dev = [
+    "deepeval>=3.9.5",
+]

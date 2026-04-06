@@ -70,7 +70,7 @@ class LLMGenerationService(GenerationService):
   def generate(self, request: GenerationRequest) -> GenerationResponse:
     if not request.retrieved_chunks:
       return GenerationResponse(
-        answer="No chunks provided",
+        answer="I don't know based on the provided context because no relevant chunks were retrieved.",
         confidence=0.0,
         citations=[],
         reasoning="Retrieval returned no chunks"

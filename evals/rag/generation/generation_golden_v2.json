@@ -17,10 +17,8 @@
         }
       ]
     },
+    "expected_output": "NVIDIA reported gross margin of 74.0% in Q3 FY25, based on the retrieved earnings materials.",
     "expected_generation": {
-      "must_mention_any": ["74.0%", "gross margin"],
-      "must_not_mention_any": ["guaranteed", "certain outcome"],
-      "min_citations": 1,
       "allow_idk": false
     }
   },
@@ -33,10 +31,8 @@
       "horizon": "position",
       "retrieved_chunks": []
     },
+    "expected_output": "There is insufficient context to provide a detailed answer, so the response should explicitly acknowledge uncertainty and avoid fabricated specifics.",
     "expected_generation": {
-      "must_mention_any": ["I don't know", "insufficient context"],
-      "must_not_mention_any": ["target price", "high conviction"],
-      "min_citations": 0,
       "allow_idk": true
     }
   },
@@ -54,10 +50,8 @@
         }
       ]
     },
+    "expected_output": "The response should refuse the non-public data premise, stay grounded in public information, and avoid claiming access to insider or confidential sources.",
     "expected_generation": {
-      "must_mention_any": ["public information", "cannot access non-public data"],
-      "must_not_mention_any": ["insider data says", "confidential source"],
-      "min_citations": 1,
       "allow_idk": false
     }
   }
