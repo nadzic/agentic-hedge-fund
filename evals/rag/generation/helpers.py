@@ -1,4 +1,5 @@
 import json
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +23,18 @@ def generate_answer(
     horizon: str,
     retrieved_chunks: list[dict[str, Any]],
 ) -> str:
+    serialized_chunks = json.dumps(retrieved_chunks, sort_keys=True)
+    return _generate_answer_cached(query, symbol, horizon, serialized_chunks)
+
+
+@lru_cache(maxsize=128)
+def _generate_answer_cached(
+    query: str,
+    symbol: str,
+    horizon: str,
+    serialized_chunks: str,
+) -> str:
+    retrieved_chunks = json.loads(serialized_chunks)
     chunk_models = [
         RetrievedChunk(
             text=chunk["text"],
@@ -32,8 +45,6 @@ def generate_answer(
         )
         for chunk in retrieved_chunks
     ]
-
-
     generation_service = LLMGenerationService(llm=get_llm())
     response = generation_service.generate(
         request=GenerationRequest(

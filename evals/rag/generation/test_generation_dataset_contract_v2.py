@@ -1,4 +1,4 @@
-from evals.rag.generation.helpers import load_generation_cases
+from .helpers import load_generation_cases
 
 ALLOWED_HORIZONS = {"swing", "position", "intraday"}
 

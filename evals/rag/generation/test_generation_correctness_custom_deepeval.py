@@ -1,9 +1,15 @@
+import os
+
 import pytest
 from deepeval import assert_test
 from deepeval.metrics import GEval
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
 
-from evals.rag.generation.helpers import generate_answer, load_generation_cases
+from .helpers import generate_answer, load_generation_cases
+
+os.environ.setdefault("DEEPEVAL_PER_ATTEMPT_TIMEOUT_SECONDS_OVERRIDE", "180")
+os.environ.setdefault("DEEPEVAL_PER_TASK_TIMEOUT_SECONDS_OVERRIDE", "420")
+EVAL_MODEL = os.getenv("DEEPEVAL_EVAL_MODEL", "gpt-4o-mini")
 
 @pytest.mark.parametrize("case", load_generation_cases(), ids=lambda case: case["id"])
 def test_generation_correctness(case) -> None:
@@ -35,6 +41,7 @@ def test_generation_correctness(case) -> None:
             LLMTestCaseParams.EXPECTED_OUTPUT,
         ],
         threshold=0.65,
+        model=EVAL_MODEL,
     )
 
-    assert_test(test_case, [correctness_metric])
+    assert_test(test_case, [correctness_metric], run_async=False)
