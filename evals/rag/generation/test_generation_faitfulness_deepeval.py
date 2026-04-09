@@ -16,7 +16,10 @@ def test_generation_faitfulness(case) -> None:
 
   payload = case["input"]
   if str(case.get("category", "")).startswith("adversarial"):
-    pytest.skip("Faithfulness is noisy for adversarial refusal cases; use correctness/policy eval instead.")
+    pytest.skip(
+      "Faithfulness is noisy for adversarial refusal cases; use "
+      "correctness/policy eval instead."
+    )
 
   answer = generate_answer(
     query=payload["query"],

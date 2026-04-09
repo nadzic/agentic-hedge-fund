@@ -32,8 +32,9 @@ def test_generation_correctness(case) -> None:
         name="correctness",
         criteria=(
             "Determine whether the actual output correctly answers the user's question "
-            "based on the expected output. Reward accurate, complete, and appropriately cautious answers. "
-            "Penalize contradictions, missing key facts, fabricated specifics, and compliance failures."
+            "based on the expected output. Reward accurate, complete, and "
+            "appropriately cautious answers. Penalize contradictions, missing "
+            "key facts, fabricated specifics, and compliance failures."
         ),
         evaluation_params=[
             LLMTestCaseParams.INPUT,
