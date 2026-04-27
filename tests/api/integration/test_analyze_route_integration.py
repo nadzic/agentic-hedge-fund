@@ -158,3 +158,50 @@ async def test_analyze_runs_through_signal_service_and_graph_runner(
     assert response.json()["signal"] == "buy"
     assert captured_state["state"]["input"].symbol == "AAPL"
     assert captured_state["state"]["input"].horizon == "swing"
+
+
+@pytest.mark.asyncio
+@pytest.mark.integration
+async def test_analyze_stream_emits_events_and_sets_cookie(
+    async_client: AsyncClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.api.routes import analyze as analyze_route
+
+    monkeypatch.setattr(
+        analyze_route,
+        "check_analyze_rate_limit",
+        lambda request, response: _allowed_decision("guest.signed"),
+    )
+    monkeypatch.setattr(
+        analyze_route,
+        "run_signal_stream_sync",
+        lambda payload: iter(
+            [
+                {"type": "update", "payload": {"node": "symbol_resolver"}},
+                {
+                    "type": "final",
+                    "payload": {
+                        "symbol": "AAPL",
+                        "signal": "buy",
+                        "confidence": 0.8,
+                        "reasoning": "Strong setup",
+                        "warning": None,
+                        "error": None,
+                    },
+                },
+            ]
+        ),
+    )
+
+    response = await async_client.post(
+        "/api/v1/signals/analyze/stream",
+        json={"query": "Please analyze AAPL for swing setup", "symbol": "AAPL", "horizon": "swing"},
+    )
+
+    assert response.status_code == 200
+    assert "text/event-stream" in response.headers["content-type"]
+    assert "event: update" in response.text
+    assert "event: final" in response.text
+    assert "AAPL" in response.text
+    assert GUEST_COOKIE_NAME in response.headers.get("set-cookie", "")

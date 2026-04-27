@@ -7,7 +7,7 @@ import { ANALYZE_TIMEOUT_MS, DICTATION_MAX_DURATION_MS } from "@/components/home
 import { AppHeader } from "@/components/home/app-header";
 import { Composer } from "@/components/home/composer";
 import { MessagesPane } from "@/components/home/messages-pane";
-import { ApiError, API_BASE_URL, apiPost } from "@/lib/api/client";
+import { ApiError, API_BASE_URL, apiPostSse } from "@/lib/api/client";
 import {
   AnalyzeResponse,
   ChatMessage,
@@ -68,6 +68,20 @@ export default function HomePage() {
   const visibleSuggestions = useMemo(() => getVisibleSuggestions(input), [input]);
   const showSuggestions =
     !hasMessages && isInputFocused && !isLoading && visibleSuggestions.length > 0;
+
+  const streamNodeLabel: Record<string, string> = {
+    symbol_resolver: "Resolving ticker",
+    input_classifier: "Validating request",
+    request_clarification: "Checking for missing details",
+    market_research_agent: "Gathering market context",
+    orchestrator: "Planning analyst tasks",
+    fundamentals_analyst_node: "Running fundamentals analyst",
+    technicals_analyst_node: "Running technicals analyst",
+    valuation_analyst_node: "Running valuation analyst",
+    sentiment_analyst_node: "Running sentiment analyst",
+    synthesizer: "Synthesizing analyst outputs",
+    risk_manager: "Applying risk controls",
+  };
 
   useEffect(() => {
     if (!window.MediaRecorder || !navigator.mediaDevices?.getUserMedia) {
@@ -270,6 +284,15 @@ export default function HomePage() {
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
+    const assistantMessageId = `assistant-${Date.now()}`;
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: assistantMessageId,
+        role: "assistant",
+        content: "Analyzing your request...",
+      },
+    ]);
 
     const abortController = new AbortController();
     const timeoutId = window.setTimeout(() => {
@@ -279,23 +302,63 @@ export default function HomePage() {
     try {
       const symbol = inferSymbol(query);
       const horizon = inferHorizon(query);
-      const data = await apiPost<AnalyzeResponse>(
-        "/signals/analyze",
+      let finalResponse: AnalyzeResponse | null = null;
+      let streamError: string | null = null;
+      await apiPostSse(
+        "/signals/analyze/stream",
         {
           query,
           symbol,
           horizon,
         },
-        { signal: abortController.signal },
-      );
-      setMessages((prev) => [
-        ...prev,
         {
-          id: `assistant-${Date.now()}`,
-          role: "assistant",
-          content: formatAssistantReply(data),
+          signal: abortController.signal,
+          onEvent: ({ event: eventName, data }) => {
+            if (eventName === "update") {
+              const payload = data as { node?: unknown };
+              const node = typeof payload.node === "string" ? payload.node : null;
+              const label = node ? (streamNodeLabel[node] ?? `Running ${node}`) : "Analyzing";
+              setMessages((prev) =>
+                prev.map((message) =>
+                  message.id === assistantMessageId
+                    ? { ...message, content: `${label}...` }
+                    : message,
+                ),
+              );
+              return;
+            }
+
+            if (eventName === "final") {
+              finalResponse = data as AnalyzeResponse;
+              setMessages((prev) =>
+                prev.map((message) =>
+                  message.id === assistantMessageId
+                    ? {
+                        ...message,
+                        content: formatAssistantReply(finalResponse as AnalyzeResponse),
+                      }
+                    : message,
+                ),
+              );
+              return;
+            }
+
+            if (eventName === "error") {
+              const payload = data as { message?: unknown };
+              streamError =
+                typeof payload.message === "string" && payload.message.trim().length > 0
+                  ? payload.message
+                  : "Streaming failed";
+            }
+          },
         },
-      ]);
+      );
+      if (streamError) {
+        throw new Error(streamError);
+      }
+      if (!finalResponse) {
+        throw new Error("Stream finished without a final response.");
+      }
     } catch (error) {
       if (error instanceof ApiError && error.status === 429) {
         const rateLimitError = parseRateLimitError(error.payload);
@@ -304,27 +367,31 @@ export default function HomePage() {
           resetAt: rateLimitError.resetAt,
           upgradeRequired: rateLimitError.upgradeRequired,
         });
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `assistant-rate-limit-${Date.now()}`,
-            role: "assistant",
-            content: `${rateLimitError.message}${
-              rateLimitError.resetAt ? `\n\nTry again after: ${rateLimitError.resetAt}` : ""
-            }`,
-          },
-        ]);
+        setMessages((prev) =>
+          prev.map((message) =>
+            message.id === assistantMessageId
+              ? {
+                  ...message,
+                  content: `${rateLimitError.message}${
+                    rateLimitError.resetAt ? `\n\nTry again after: ${rateLimitError.resetAt}` : ""
+                  }`,
+                }
+              : message,
+          ),
+        );
         return;
       }
       const text = getAnalyzeErrorMessage(error, ANALYZE_TIMEOUT_MS);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `assistant-error-${Date.now()}`,
-          role: "assistant",
-          content: `I could not complete the analysis.\n\n${text}`,
-        },
-      ]);
+      setMessages((prev) =>
+        prev.map((message) =>
+          message.id === assistantMessageId
+            ? {
+                ...message,
+                content: `I could not complete the analysis.\n\n${text}`,
+              }
+            : message,
+        ),
+      );
     } finally {
       window.clearTimeout(timeoutId);
       setIsLoading(false);
