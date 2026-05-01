@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    container_name: primer-studio-api
+    container_name: agentic-hedge-fund-api
     ports:
       - "8000:8000"
     expose:
@@ -39,7 +39,7 @@ services:
     build:
       context: ./app/frontend
       dockerfile: Dockerfile.dev
-    container_name: primer-studio-frontend
+    container_name: agentic-hedge-fund-frontend
     ports:
       - "3000:3000"
     environment:

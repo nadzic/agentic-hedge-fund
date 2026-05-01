@@ -1,6 +1,6 @@
-# Primer Studio
+# Agentic Hedge Fund
 
-[![CI](https://github.com/nadzic/primer-studio/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/nadzic/primer-studio/actions/workflows/ci.yml)
+[![CI](https://github.com/nadzic/agentic-hedge-fund/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/nadzic/agentic-hedge-fund/actions/workflows/ci.yml)
 [![Live App](https://img.shields.io/badge/Live%20App-veritake.ai-2563EB?logo=googlechrome&logoColor=white)](https://veritake.ai)
 ![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
@@ -37,7 +37,7 @@ This project provides a single pipeline that:
 
 - Multi-agent orchestration with clear node boundaries (`LangGraph`).
 - Retrieval + tool-augmented reasoning in one flow.
-- End-to-end system design (backend, frontend, voice input, CI).
+- End-to-end system design (backend, frontend, auth, voice input, CI).
 - Practical API contract and reproducible local environment.
 
 ## What I Built
@@ -60,14 +60,15 @@ This project provides a single pipeline that:
 
 ### Product-facing features
 
-- FastAPI endpoints for research, RAG query, and ingestion.
+- FastAPI endpoints for analysis, RAG query, and ingestion.
 - Metadata endpoint `GET /api/v1/meta/model` for runtime model transparency.
-- Next.js chat-style frontend for research workflow.
+- Next.js chat-style frontend for analysis workflow.
+- Supabase authentication (`/sign-in`, `/sign-up`, OAuth callback).
 - Voice dictation + transcription via `POST /api/transcribe` (ElevenLabs proxy route).
 
 ## System Flow
 
-`request -> resolve_company -> plan_search -> search_public_sources -> rank_sources -> extract_evidence -> classify_evidence -> select_evidence -> synthesize_brief -> response`
+`request -> symbol_resolver -> input_classifier -> clarification OR research -> analyst fan-out -> synthesizer -> risk_manager -> response`
 
 ```mermaid
 flowchart TD
@@ -98,41 +99,33 @@ flowchart TD
 
 - `GET /api/v1/health`
 - `GET /api/v1/meta/model`
-- `POST /api/v1/research`
+- `POST /api/v1/signals/analyze`
 - `POST /api/v1/rag/query`
 - `POST /api/v1/rag/ingest-index`
 
-Example research request:
+`POST /api/v1/signals/analyze` rate-limit behavior:
+- Anonymous users: `2` queries per UTC day
+- Authenticated users: `5` queries per UTC day
+- Limit exceeded: `429` with metadata (`identity_type`, `limit`, `remaining`, `reset_at`)
+
+Example analyze request:
 
 ```json
 {
-  "query": "Please research NVDA"
+  "query": "Should I buy NVDA for a swing trade?",
+  "symbol": "NVDA",
+  "horizon": "swing"
 }
 ```
 
-Example research response shape:
+Example analyze response shape:
 
 ```json
 {
-  "company": "NVIDIA Corporation",
-  "ticker": "NVDA",
-  "brief": {
-    "executive_summary": "...",
-    "what_changed": [],
-    "what_matters_most_now": [],
-    "bull_points": [],
-    "bear_points": [],
-    "what_to_watch_next": []
-  },
-  "evidence_quality_summary": {
-    "strong": 4,
-    "medium": 3,
-    "weak": 1
-  },
-  "sources": [],
-  "selected_evidence": [],
-  "discarded_evidence_count": 8,
-  "disclaimer": "This is not investment advice.",
+  "symbol": "NVDA",
+  "signal": "buy",
+  "confidence": 0.74,
+  "reasoning": "Condensed synthesis of analyst outputs...",
   "warning": null,
   "error": null
 }
@@ -154,7 +147,7 @@ Example research response shape:
 - Next.js 16
 - React 19
 - TypeScript
-- Typed API client for backend workflow integration
+- Supabase SSR client
 
 ### Tooling
 
@@ -184,6 +177,9 @@ Optional:
 - `FINNHUB_API_KEY`
 - `LANGFUSE_PUBLIC_KEY`
 - `LANGFUSE_SECRET_KEY`
+- `SUPABASE_URL` (fallback: `NEXT_PUBLIC_SUPABASE_URL`)
+- `SUPABASE_ANON_KEY` (fallback: `NEXT_PUBLIC_SUPABASE_ANON_KEY`)
+- `SUPABASE_SERVICE_ROLE_KEY` (recommended for backend RPC calls)
 - `RATE_LIMIT_ANON_DAILY` (default `2`)
 - `RATE_LIMIT_USER_DAILY` (default `5`)
 - `RATE_LIMIT_COOKIE_SECRET` (for signed anonymous guest cookie)
@@ -198,7 +194,19 @@ npm run dev
 
 Set `app/frontend/.env.local`:
 - `NEXT_PUBLIC_API_URL` (default `http://localhost:8000/api/v1`)
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `ELEVENLABS_API_KEY` (required for voice transcription)
+
+### 2.1) Supabase SQL setup for rate limiting
+
+Run the SQL script in Supabase SQL Editor:
+
+`app/api/supabase_rate_limit.sql`
+
+This creates:
+- `public.usage_limits` daily counters table
+- `public.check_and_increment_usage_limit(...)` RPC function used by backend
 
 ### 3) Full stack with Docker
 

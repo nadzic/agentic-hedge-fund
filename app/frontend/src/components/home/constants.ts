@@ -1,7 +1,8 @@
 export const ANALYZE_TIMEOUT_MS = 45_000;
+export const DICTATION_MAX_DURATION_MS = 15_000;
 
 export const SUGGESTED_PROMPTS = [
-  "Please research NVDA",
-  "Please research AAPL and explain what changed in latest reporting",
-  "Please research TSLA and list bull and bear points",
+  "Please analyze NVDA for swing trading",
+  "Please analyze AAPL for intraday trading",
+  "Please analyze TSLA for position trading",
 ] as const;

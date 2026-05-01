@@ -9,7 +9,8 @@ def test_registered_api_routes(app: FastAPI) -> None:
 
     assert "/api/v1/health" in route_paths
     assert "/api/v1/meta/model" in route_paths
-    assert "/api/v1/research" in route_paths
+    assert "/api/v1/signals/analyze" in route_paths
+    assert "/api/v1/signals/analyze/stream" in route_paths
     assert "/api/v1/rag/query" in route_paths
     assert "/api/v1/rag/ingest-index" in route_paths
 
@@ -25,6 +26,7 @@ def test_health_endpoint_via_testclient(
         return health_route.DependencyCheck(status="ok", latency_ms=1.0)
 
     monkeypatch.setattr(health_route, "_check_qdrant", _ok_check)
+    monkeypatch.setattr(health_route, "_check_supabase", _ok_check)
     monkeypatch.setattr(health_route, "_check_llm", _ok_check)
 
     client = TestClient(app)
@@ -32,4 +34,4 @@ def test_health_endpoint_via_testclient(
 
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
-    assert set(response.json()["checks"].keys()) == {"qdrant", "llm"}
+    assert set(response.json()["checks"].keys()) == {"qdrant", "supabase", "llm"}

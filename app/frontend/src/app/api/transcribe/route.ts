@@ -95,6 +95,61 @@ function buildFallbackDecision(guestId: string, limit: number): RateLimitDecisio
   };
 }
 
+async function callSupabaseUsageRpc(guestId: string, limit: number): Promise<RateLimitDecision> {
+  const supabaseUrl = getEnv("SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_URL");
+  const supabaseKey = getEnv(
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_ANON_KEY",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+  );
+  if (!supabaseUrl || !supabaseKey) {
+    return buildFallbackDecision(guestId, limit);
+  }
+
+  try {
+    const response = await fetch(
+      `${supabaseUrl.replace(/\/$/, "")}/rest/v1/rpc/check_and_increment_usage_limit`,
+      {
+        method: "POST",
+        headers: {
+          apikey: supabaseKey,
+          Authorization: `Bearer ${supabaseKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          p_identity_type: "anon",
+          p_identity_key: `transcribe:anon:${guestId}`,
+          p_daily_limit: limit,
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      return buildFallbackDecision(guestId, limit);
+    }
+
+    const payload = (await response.json()) as
+      | Record<string, unknown>
+      | Array<Record<string, unknown>>;
+    const row = Array.isArray(payload) ? payload[0] : payload;
+    if (!row || typeof row !== "object") {
+      return buildFallbackDecision(guestId, limit);
+    }
+
+    return {
+      allowed: row.allowed === true,
+      limit,
+      remaining:
+        typeof row.remaining === "number"
+          ? Math.max(Math.trunc(row.remaining), 0)
+          : Math.max(limit - 1, 0),
+      resetAt: typeof row.reset_at === "string" ? row.reset_at : null,
+    };
+  } catch {
+    return buildFallbackDecision(guestId, limit);
+  }
+}
+
 async function checkTranscribeRateLimit(request: NextRequest): Promise<{
   decision: RateLimitDecision;
   cookieValueToSet: string | null;
@@ -104,7 +159,7 @@ async function checkTranscribeRateLimit(request: NextRequest): Promise<{
 
   const guestId = verifiedGuestId ?? crypto.randomUUID().replaceAll("-", "");
   const cookieValueToSet = verifiedGuestId ? null : `${guestId}.${signGuestId(guestId)}`;
-  const decision = buildFallbackDecision(guestId, dailyLimit());
+  const decision = await callSupabaseUsageRpc(guestId, dailyLimit());
 
   return { decision, cookieValueToSet };
 }

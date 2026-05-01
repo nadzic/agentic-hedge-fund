@@ -17,7 +17,7 @@ resolution-markers = [
 ]
 
 [[package]]
-name = "primer-studio"
+name = "agentic-hedge-fund"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
