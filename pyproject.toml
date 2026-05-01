@@ -1,7 +1,7 @@
 [project]
-name = "agentic-hedge-fund"
+name = "primer-studio"
 version = "0.1.0"
-description = "Agentic hedge fund research and decisioning stack"
+description = "Primer Studio research and decisioning stack"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

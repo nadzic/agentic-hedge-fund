@@ -1,100 +1,68 @@
 import { SUGGESTED_PROMPTS } from "@/components/home/constants";
-import {
-  AnalyzeResponse,
-  Horizon,
-  RateLimitErrorPayload,
-  TranscribeRateLimitErrorPayload,
-} from "@/components/home/types";
+import { ResearchResponse } from "@/components/home/types";
 
-export function inferSymbol(query: string): string | null {
-  const candidates = query.match(/\b[A-Z]{1,5}\b/g);
-  return candidates?.at(-1) ?? null;
+function formatSection(title: string, items: string[]): string[] {
+  if (items.length === 0) {
+    return [title, "..."];
+  }
+  return [title, ...items.map((item) => `- ${item}`)];
 }
 
-export function inferHorizon(query: string): Horizon | null {
-  const normalized = query.toLowerCase();
-  if (normalized.includes("intraday")) return "intraday";
-  if (normalized.includes("position")) return "position";
-  if (normalized.includes("swing")) return "swing";
-  return null;
+function formatSource(source: Record<string, unknown>, index: number): string {
+  const title = typeof source.title === "string" && source.title.trim() ? source.title.trim() : "Source";
+  const sourceType =
+    typeof source.source_type === "string" && source.source_type.trim()
+      ? source.source_type.trim()
+      : "unknown";
+  const score =
+    typeof source.final_source_score === "number" && Number.isFinite(source.final_source_score)
+      ? source.final_source_score.toFixed(2)
+      : "n/a";
+  return `${index + 1}. ${title} - ${sourceType} - score ${score}`;
 }
 
-export function formatAssistantReply(payload: AnalyzeResponse): string {
-  const symbol = payload.symbol || "Unknown symbol";
-  const signal = payload.signal.toLowerCase();
-  const confidencePct = Math.round(payload.confidence * 100);
-  const confidenceLabel = getConfidenceLabel(payload.confidence);
-  const headline = getSignalHeadline(symbol, signal);
-  const reasoning = payload.reasoning?.trim() || "No reasoning provided.";
+export function formatResearchReply(payload: ResearchResponse): string {
+  const company = payload.company || "Unknown company";
+  const ticker = payload.ticker || "N/A";
+  const brief = payload.brief;
+  const quality = payload.evidence_quality_summary;
+  const sources = payload.sources.slice(0, 3).map((item) => item as Record<string, unknown>);
 
   const lines = [
-    headline,
-    `Confidence: ${confidenceLabel} (${confidencePct}%)`,
+    `${company} (${ticker})`,
+    "Latest reporting research brief",
+    "----------------------------------------",
     "",
-    `Why: ${reasoning}`,
+    ...formatSection("Executive summary", brief.executive_summary ? [brief.executive_summary] : []),
+    "",
+    ...formatSection("What changed", brief.what_changed),
+    "",
+    ...formatSection("What matters most now", brief.what_matters_most_now),
+    "",
+    ...formatSection("Bull points", brief.bull_points),
+    "",
+    ...formatSection("Bear points", brief.bear_points),
+    "",
+    ...formatSection("What to watch next", brief.what_to_watch_next),
+    "",
+    "Evidence quality",
+    `Strong: ${quality.strong} | Medium: ${quality.medium} | Weak: ${quality.weak}`,
+    "",
+    "Sources used",
+    ...(sources.length > 0 ? sources.map((source, index) => formatSource(source, index)) : ["- No sources"]),
+    "",
+    "Disclaimer",
+    payload.disclaimer || "This is not investment advice.",
   ];
 
-  const normalizedWarning = normalizeWarning(payload.warning);
-  if (normalizedWarning) {
-    lines.push("", `Note: ${normalizedWarning}`);
+  if (payload.warning) {
+    lines.push("", `Warning: ${payload.warning}`);
   }
-
-  const nextStep = getNextStep(signal, normalizedWarning);
-  if (nextStep) {
-    lines.push("", `Next step: ${nextStep}`);
-  }
-
   if (payload.error) {
-    lines.push("", "Internal status: input validation needs more detail.");
+    lines.push("", `Error: ${payload.error}`);
   }
 
   return lines.join("\n");
-}
-
-function getSignalHeadline(symbol: string, signal: string): string {
-  if (signal === "buy") return `${symbol} - Buy setup`;
-  if (signal === "sell") return `${symbol} - Sell setup`;
-  if (signal === "hold") return `${symbol} - Hold for now`;
-  return `${symbol} - No trade right now`;
-}
-
-function getConfidenceLabel(confidence: number): string {
-  if (confidence >= 0.75) return "High";
-  if (confidence >= 0.6) return "Moderate";
-  if (confidence >= 0.4) return "Low";
-  return "Very low";
-}
-
-function normalizeWarning(warning: string | null): string | null {
-  if (!warning) return null;
-
-  if (warning.includes("Confidence clamped to min_confidence")) {
-    return "Confidence is below the minimum trade threshold.";
-  }
-
-  if (warning.includes("Position size clamped to max_position_size")) {
-    return "Suggested position size was reduced to stay within risk limits.";
-  }
-
-  return warning;
-}
-
-function getNextStep(signal: string, warning: string | null): string | null {
-  if (signal === "buy") {
-    return "Review entry and risk levels before placing any order.";
-  }
-  if (signal === "sell") {
-    return "Confirm downside momentum and define your invalidation level.";
-  }
-  if (signal === "hold") {
-    return "Wait for clearer direction before taking a new position.";
-  }
-
-  if (warning?.includes("minimum trade threshold")) {
-    return "Wait for stronger confirmation or try a different time horizon.";
-  }
-
-  return "Provide more market context if you want a refined analysis.";
 }
 
 export function getVisibleSuggestions(input: string): string[] {
@@ -113,54 +81,4 @@ export function getAnalyzeErrorMessage(error: unknown, timeoutMs: number): strin
     return error.message;
   }
   return "Unknown error";
-}
-
-function formatResetAt(value: string): string {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-  return parsed.toLocaleString();
-}
-
-export function parseRateLimitError(payload: unknown): RateLimitErrorPayload {
-  const detail =
-    payload && typeof payload === "object" && "detail" in payload
-      ? (payload as { detail?: unknown }).detail
-      : payload;
-
-  const detailObject =
-    detail && typeof detail === "object" ? (detail as Record<string, unknown>) : {};
-  const messageFromApi = detailObject.message;
-  const resetAtFromApi = detailObject.reset_at;
-  const upgradeRequiredFromApi = detailObject.upgrade_required;
-
-  return {
-    message:
-      typeof messageFromApi === "string" && messageFromApi.trim().length > 0
-        ? messageFromApi
-        : "Free limit reached (2/day). Sign in or sign up to continue.",
-    resetAt: typeof resetAtFromApi === "string" ? formatResetAt(resetAtFromApi) : null,
-    upgradeRequired: upgradeRequiredFromApi === true,
-  };
-}
-
-export function parseTranscribeRateLimitError(payload: unknown): TranscribeRateLimitErrorPayload {
-  const detail =
-    payload && typeof payload === "object" && "detail" in payload
-      ? (payload as { detail?: unknown }).detail
-      : payload;
-
-  const detailObject =
-    detail && typeof detail === "object" ? (detail as Record<string, unknown>) : {};
-  const messageFromApi = detailObject.message;
-  const resetAtFromApi = detailObject.reset_at;
-
-  return {
-    message:
-      typeof messageFromApi === "string" && messageFromApi.trim().length > 0
-        ? messageFromApi
-        : "You've reached free limit for voice transcription.",
-    resetAt: typeof resetAtFromApi === "string" ? formatResetAt(resetAtFromApi) : null,
-  };
 }

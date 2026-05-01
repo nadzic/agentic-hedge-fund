@@ -17,6 +17,7 @@ type ComposerProps = {
   showSuggestions: boolean;
   visibleSuggestions: string[];
   onSuggestionSelect: (prompt: string) => void;
+  showDictation?: boolean;
 };
 
 export function Composer({
@@ -36,6 +37,7 @@ export function Composer({
   showSuggestions,
   visibleSuggestions,
   onSuggestionSelect,
+  showDictation = true,
 }: ComposerProps) {
   return (
     <form onSubmit={onSubmit} className="relative w-full">
@@ -54,40 +56,42 @@ export function Composer({
                 className="w-full bg-transparent text-sm text-zinc-100 placeholder:text-zinc-500 outline-none"
               />
             </div>
-            <button
-              type="button"
-              onClick={onToggleDictation}
-              disabled={
-                isLoading ||
-                isTranscribing ||
-                !isDictationSupported ||
-                Boolean(dictationDisabledReason)
-              }
-              title={
-                dictationDisabledReason ??
-                (isTranscribing ? "Transcribing..." : isDictating ? "Stop dictation" : "Dictation")
-              }
-              className={`inline-flex h-9 w-9 items-center justify-center rounded-full border transition disabled:cursor-not-allowed disabled:opacity-50 ${
-                isDictating
-                  ? "border-red-500/60 bg-red-500/20 text-red-100"
-                  : "border-zinc-700 bg-zinc-900 text-zinc-100 hover:bg-zinc-800"
-              }`}
-            >
-              {isDictating ? (
-                <span className="h-2.5 w-2.5 rounded-[2px] bg-current" />
-              ) : (
-                <svg
-                  aria-hidden
-                  viewBox="0 0 24 24"
-                  className="h-4 w-4 fill-none stroke-current"
-                  strokeWidth="1.8"
-                >
-                  <path d="M12 4a3 3 0 0 1 3 3v5a3 3 0 1 1-6 0V7a3 3 0 0 1 3-3Z" />
-                  <path d="M5 11.5a7 7 0 0 0 14 0" />
-                  <path d="M12 18.5v2.5" />
-                </svg>
-              )}
-            </button>
+            {showDictation && (
+              <button
+                type="button"
+                onClick={onToggleDictation}
+                disabled={
+                  isLoading ||
+                  isTranscribing ||
+                  !isDictationSupported ||
+                  Boolean(dictationDisabledReason)
+                }
+                title={
+                  dictationDisabledReason ??
+                  (isTranscribing ? "Transcribing..." : isDictating ? "Stop dictation" : "Dictation")
+                }
+                className={`inline-flex h-9 w-9 items-center justify-center rounded-full border transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                  isDictating
+                    ? "border-red-500/60 bg-red-500/20 text-red-100"
+                    : "border-zinc-700 bg-zinc-900 text-zinc-100 hover:bg-zinc-800"
+                }`}
+              >
+                {isDictating ? (
+                  <span className="h-2.5 w-2.5 rounded-[2px] bg-current" />
+                ) : (
+                  <svg
+                    aria-hidden
+                    viewBox="0 0 24 24"
+                    className="h-4 w-4 fill-none stroke-current"
+                    strokeWidth="1.8"
+                  >
+                    <path d="M12 4a3 3 0 0 1 3 3v5a3 3 0 1 1-6 0V7a3 3 0 0 1 3-3Z" />
+                    <path d="M5 11.5a7 7 0 0 0 14 0" />
+                    <path d="M12 18.5v2.5" />
+                  </svg>
+                )}
+              </button>
+            )}
             <button
               type="submit"
               disabled={isLoading || input.trim().length === 0}

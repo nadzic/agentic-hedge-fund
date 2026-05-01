@@ -14,7 +14,6 @@ def test_health_and_model_endpoints_smoke(
         return health_route.DependencyCheck(status="ok", latency_ms=1.0)
 
     monkeypatch.setattr(health_route, "_check_qdrant", _ok_check)
-    monkeypatch.setattr(health_route, "_check_supabase", _ok_check)
     monkeypatch.setattr(health_route, "_check_llm", _ok_check)
     monkeypatch.setenv("LLM_MODEL_NAME", "test-model")
     client = TestClient(app)

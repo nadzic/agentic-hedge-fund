@@ -23,7 +23,8 @@ class RecentFilings(TypedDict):
     filingDate: list[str]
 
 
-BASE = Path.home() / "Documents/Repos/agentic-hedge-fund/app/rag/data/raw"
+REPO_ROOT = Path(__file__).resolve().parents[1]
+BASE = REPO_ROOT / "app" / "rag" / "data" / "raw"
 BASE.mkdir(parents=True, exist_ok=True)
 
 COMPANIES: dict[str, CompanyConfig] = {

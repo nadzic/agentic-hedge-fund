@@ -74,8 +74,6 @@ run_frontend_checks() {
     cd "${FRONTEND_DIR}" && \
     NEXT_PUBLIC_API_URL="http://localhost:8000/api/v1" \
     NEXT_PUBLIC_SITE_URL="http://localhost:3000" \
-    NEXT_PUBLIC_SUPABASE_URL="https://example.supabase.co" \
-    NEXT_PUBLIC_SUPABASE_ANON_KEY="sb_publishable_ci_dummy_key" \
     npm run build
   )
 

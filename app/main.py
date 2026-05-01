@@ -19,8 +19,8 @@ def _allowed_origins() -> list[str]:
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title="Agentic Hedge Fund",
-        description="Agentic hedge fund research and decisioning stack"
+        title="Primer Studio",
+        description="Primer Studio research and decisioning stack",
     )
 
     app.add_middleware(
