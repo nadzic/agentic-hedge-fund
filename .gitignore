@@ -31,6 +31,10 @@ env/
 .coverage.*
 htmlcov/
 
+.agent
+.harness/
+.worktrees/*
+
 # IDE/editor files
 .idea/
 .vscode/
