@@ -13,6 +13,7 @@ def test_registered_api_routes(app: FastAPI) -> None:
     assert "/api/v1/signals/analyze/stream" in route_paths
     assert "/api/v1/rag/query" in route_paths
     assert "/api/v1/rag/ingest-index" in route_paths
+    assert "/api/v1/meta/server-time" in route_paths
 
 
 @pytest.mark.integration

@@ -5,11 +5,13 @@ from app.api.routes.health import router as health_router
 from app.api.routes.meta import router as meta_router
 from app.api.routes.rag_ingest import router as rag_ingest_router
 from app.api.routes.rag_query import router as rag_query_router
+from app.api.routes.server_time import router as server_time_router
 
 api_router = APIRouter()
 
 api_router.include_router(health_router, tags=["health"])
 api_router.include_router(meta_router, prefix="/meta", tags=["meta"])
+api_router.include_router(server_time_router, prefix="/meta", tags=["meta"])
 api_router.include_router(analyze_router, prefix="/signals", tags=["analyze"])
 # RAG endpoints -- there should be as well protected endpoints for ingestion
 api_router.include_router(rag_ingest_router, prefix="/rag", tags=["ingest-index"])
