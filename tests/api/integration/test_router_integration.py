@@ -8,6 +8,7 @@ def test_registered_api_routes(app: FastAPI) -> None:
     route_paths = {getattr(route, "path", "") for route in app.routes}
 
     assert "/api/v1/health" in route_paths
+    assert "/api/v1/market-status" in route_paths
     assert "/api/v1/meta/model" in route_paths
     assert "/api/v1/signals/analyze" in route_paths
     assert "/api/v1/signals/analyze/stream" in route_paths
@@ -35,3 +36,12 @@ def test_health_endpoint_via_testclient(
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
     assert set(response.json()["checks"].keys()) == {"qdrant", "supabase", "llm"}
+
+
+@pytest.mark.integration
+def test_market_status_endpoint_via_testclient(app: FastAPI) -> None:
+    client = TestClient(app)
+    response = client.get("/api/v1/market-status")
+
+    assert response.status_code == 200
+    assert response.json() == {"market": "open"}
