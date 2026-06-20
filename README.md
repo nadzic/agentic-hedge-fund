@@ -50,7 +50,8 @@ This project provides a single pipeline that:
 - `market_research_agent` enriches state with:
   - RAG context from indexed documents,
   - insider-trading summary signal.
-- Analyst fan-out nodes:
+- `orchestrator` creates fan-out analyst tasks and routes them to the correct worker.
+- Analyst fan-out nodes (parallel execution via `Send`):
   - fundamentals,
   - technicals,
   - valuation,
@@ -64,11 +65,13 @@ This project provides a single pipeline that:
 - Metadata endpoint `GET /api/v1/meta/model` for runtime model transparency.
 - Next.js chat-style frontend for analysis workflow.
 - Supabase authentication (`/sign-in`, `/sign-up`, OAuth callback).
-- Voice dictation + transcription via `POST /api/transcribe` (ElevenLabs proxy route).
+- Voice dictation + transcription via `POST /api/transcribe` (ElevenLabs proxy route in Next.js).
 
 ## System Flow
 
-`request -> symbol_resolver -> input_classifier -> clarification OR research -> analyst fan-out -> synthesizer -> risk_manager -> response`
+```
+request -> symbol_resolver -> input_classifier -> clarification OR research -> orchestrator -> analyst fan-out -> synthesizer -> risk_manager -> response
+```
 
 ```mermaid
 flowchart TD
@@ -79,20 +82,24 @@ flowchart TD
 
     C -->|valid| F[Market Research Agent]
     F --> F1[RAG Context]
+    F1 -.- F1a{MAG7?}
+    F1a -->|yes| F1b[Query Qdrant]
+    F1a -->|no| F1c[Skip RAG]
     F --> F2[Insider Signal]
 
-    F --> G[Analyst Fan-out]
-    G --> G1[Fundamentals]
-    G --> G2[Technicals]
-    G --> G3[Valuation]
-    G --> G4[Sentiment]
+    F --> G[Orchestrator]
+    G --> H[Analyst Fan-out]
+    H --> H1[Fundamentals]
+    H --> H2[Technicals]
+    H --> H3[Valuation]
+    H --> H4[Sentiment]
 
-    G1 --> H[Synthesizer]
-    G2 --> H
-    G3 --> H
-    G4 --> H
-    H --> I[Risk Manager]
-    I --> E
+    H1 --> I[Synthesizer]
+    H2 --> I
+    H3 --> I
+    H4 --> I
+    I --> J[Risk Manager]
+    J --> E
 ```
 
 ## API Surface
@@ -139,15 +146,17 @@ Example analyze response shape:
 - FastAPI + Uvicorn
 - LangGraph / LangChain
 - LlamaIndex
-- Qdrant
+- Qdrant + FAISS
 - yfinance + external APIs (optional, key-dependent)
 
 ### Frontend
 
-- Next.js 16
-- React 19
+- Next.js 16.2
+- React 19.2
 - TypeScript
 - Supabase SSR client
+- Tailwind CSS v4
+- Vitest
 
 ### Tooling
 
@@ -227,14 +236,28 @@ app/
   agents/
     graph/
       nodes/
+        analysts/
+        input_classifier.py
+        market_research_agent.py
+        orchestrator.py
+        request_clarification.py
+        risk_manager.py
+        symbol_resolver.py
+        synthesizer.py
     services/
       fundamentals/
+      insider/
+      llm.py
+      sentiment/
       technicals/
       valuation/
-      sentiment/
-      insider/
   api/
     routes/
+      analyze.py
+      health.py
+      meta.py
+      rag_ingest.py
+      rag_query.py
     schemas/
   rag/
     ingestion/
@@ -246,18 +269,61 @@ app/
   frontend/
     src/
       app/
+        api/transcribe/
+        auth/
+        sign-in/
+        sign-up/
       components/
       lib/
+evals/
+  datasets/
+  rag/generation/
 ```
 
 ## Quality
 
-CI checks on push to `main`:
-- Ruff lint
-- BasedPyright type checks
-- Pytest (when tests exist)
-- Python compile smoke checks
-- Docker build
+### CI checks (on push to `main`)
+
+| Job | What it runs |
+|-----|-------------|
+| **Frontend** | ESLint, `tsc --noEmit`, `next build`, Prettier format check, Vitest tests |
+| **Python** | Ruff lint, BasedPyright type check, Pytest, `compileall` smoke check |
+| **Evals contract** | Dataset schema validation via `test_generation_dataset_contract_v2.py` |
+| **LLM Evals** | Faithfulness, relevancy, correctness (deepeval) — scheduled nightly or manual dispatch |
+| **Docker** | `docker build` smoke check (depends on Python + Frontend + Evals) |
+| **Deploy** | Build & push to GAR, deploy API + Frontend to Cloud Run (main only) |
+
+### Running checks locally
+
+```bash
+# Backend
+uv sync --extra dev
+uv run ruff check .
+uv run basedpyright --level error .
+uv run pytest -q
+
+# Frontend
+cd app/frontend && npm run lint && npm run typecheck && npm run test
+
+# All at once
+./run_ci_checks.sh
+```
+
+## Evaluations
+
+LLM-powered quality evaluations live in `evals/`:
+
+- **Contract tests**: Validate dataset schema (run in CI on every push).
+- **RAG generation evals**: Faithfulness, relevancy, and correctness scored via `deepeval` — run nightly or on `workflow_dispatch` with `run_llm_evals: true`.
+
+## Deployment
+
+CI automatically deploys to **Google Cloud Run** when merged to `main`:
+1. Authenticate via OIDC workload identity federation.
+2. Build & push API and Frontend images to Artifact Registry.
+3. Deploy each to Cloud Run with secrets injected via Secret Manager.
+
+Environment-specific variables are configured through GitHub Actions vars.
 
 ## TODOs
 
